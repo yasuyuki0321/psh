@@ -31,26 +31,27 @@ func runScp(cmd *cobra.Command, args []string) {
 	wg := sync.WaitGroup{}
 	wg.Add(len(targets))
 
-	for _, target := range targets {
-		go executeScpOnTarget(&wg, target)
+	for id, ip := range targets {
+		go executeScpOnTarget(&wg, id, ip)
 	}
 
 	wg.Wait()
 	fmt.Println("finish")
 }
 
-func executeScpOnTarget(wg *sync.WaitGroup, target string) {
+func executeScpOnTarget(wg *sync.WaitGroup, id string, ip string) {
 	defer wg.Done()
 
-	err := scpExec(user, privateKeyPath, target, source, dest, permission)
+	err := scpExec(user, privateKeyPath, id, ip, source, dest, permission)
 	if err != nil {
-		fmt.Printf("error executing on %v: %v\n", target, err)
+		fmt.Printf("error executing on %v: %v\n", ip, err)
 	}
 }
 
-func printScpHeader(ip, source, dest, permission string) {
+func printScpHeader(id, ip, source, dest, permission string) {
 	fmt.Println(strings.Repeat("-", 10))
 	fmt.Printf("time: %v\n", time.Now().Format("2006-01-02 15:04:05"))
+	fmt.Printf("id: %v\n", id)
 	fmt.Printf("ip: %v\n", ip)
 	fmt.Printf("source: %v\n", source)
 	fmt.Printf("dest: %v\n", dest)
@@ -58,7 +59,7 @@ func printScpHeader(ip, source, dest, permission string) {
 	fmt.Println(strings.Repeat("-", 10))
 }
 
-func scpExec(user, privateKeyPath, ip, source, dest, permission string) error {
+func scpExec(user, privateKeyPath, id, ip, source, dest, permission string) error {
 	config, err := getSSHConfig(privateKeyPath, user)
 	if err != nil {
 		return fmt.Errorf("failed to get ssh config: %v", err)
@@ -87,7 +88,7 @@ func scpExec(user, privateKeyPath, ip, source, dest, permission string) error {
 		return fmt.Errorf("error while copying file: %v", err)
 	}
 
-	printScpHeader(ip, source, dest, permission)
+	printScpHeader(id, ip, source, dest, permission)
 	return nil
 }
 

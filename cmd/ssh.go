@@ -32,32 +32,33 @@ func runSSH(cmd *cobra.Command, args []string) {
 	wg := sync.WaitGroup{}
 	wg.Add(len(targets))
 
-	for _, target := range targets {
-		go executeSSHOnTarget(&wg, target)
+	for id, ip := range targets {
+		go executeSSHOnTarget(&wg, id, ip)
 	}
 
 	wg.Wait()
 	fmt.Println("finish")
 }
 
-func executeSSHOnTarget(wg *sync.WaitGroup, target string) {
+func executeSSHOnTarget(wg *sync.WaitGroup, id string, ip string) {
 	defer wg.Done()
 
-	err := sshExec(user, privateKeyPath, target, command)
+	err := sshExec(user, privateKeyPath, id, ip, command)
 	if err != nil {
-		fmt.Printf("Error executing on %v: %v\n", target, err)
+		fmt.Printf("Error executing on %v: %v\n", ip, err)
 	}
 }
 
-func printSshHeader(ip, command string) {
+func printSshHeader(id, ip, command string) {
 	fmt.Println(strings.Repeat("-", 10))
 	fmt.Printf("time: %v\n", time.Now().Format("2006-01-02 15:04:05"))
+	fmt.Printf("id: %v\n", id)
 	fmt.Printf("ip: %v\n", ip)
 	fmt.Printf("command: %v\n", command)
 	fmt.Println(strings.Repeat("-", 10))
 }
 
-func sshExec(user, privateKeyPath, ip, command string) error {
+func sshExec(user, privateKeyPath, id, ip, command string) error {
 	config, err := getSSHConfig(privateKeyPath, user)
 	if err != nil {
 		return fmt.Errorf("failed to get ssh config: %v", err)
@@ -81,7 +82,7 @@ func sshExec(user, privateKeyPath, ip, command string) error {
 		return fmt.Errorf("failed to run command: %v", err)
 	}
 
-	printSshHeader(ip, command)
+	printSshHeader(id, ip, command)
 	fmt.Println(b.String())
 
 	return nil

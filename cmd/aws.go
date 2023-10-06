@@ -9,7 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 )
 
-func createTargetList(tagKey, tagValue string) ([]string, error) {
+func createTargetList(tagKey, tagValue string) (map[string]string, error) {
 
 	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion("ap-northeast-1"))
 	if err != nil {
@@ -31,11 +31,11 @@ func createTargetList(tagKey, tagValue string) ([]string, error) {
 		return nil, fmt.Errorf("unable to describe instances, %v", err)
 	}
 
-	targetList := []string{}
+	targetList := map[string]string{}
 	for _, reservation := range resp.Reservations {
 		for _, instance := range reservation.Instances {
 			if instance.PublicIpAddress != nil && *instance.State.Code == 16 {
-				targetList = append(targetList, *instance.PublicIpAddress)
+				targetList[*instance.InstanceId] = *instance.PublicIpAddress
 			}
 		}
 	}
