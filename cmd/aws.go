@@ -34,10 +34,14 @@ func createTargetList(tagKey, tagValue string) ([]string, error) {
 	targetList := []string{}
 	for _, reservation := range resp.Reservations {
 		for _, instance := range reservation.Instances {
-			if instance.PublicIpAddress != nil {
+			if instance.PublicIpAddress != nil && *instance.State.Code == 16 {
 				targetList = append(targetList, *instance.PublicIpAddress)
 			}
 		}
+	}
+
+	if len(targetList) == 0 {
+		return nil, fmt.Errorf("no targets found")
 	}
 
 	return targetList, nil
