@@ -57,6 +57,7 @@ func printScpHeader(id, ip, source, dest, permission string) {
 	fmt.Printf("dest: %v\n", dest)
 	fmt.Printf("permission: %v\n", permission)
 	fmt.Println(strings.Repeat("-", 10))
+	fmt.Println("")
 }
 
 func scpExec(user, privateKeyPath, id, ip, source, dest, permission string) error {
