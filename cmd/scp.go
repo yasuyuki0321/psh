@@ -31,21 +31,35 @@ func runScp(cmd *cobra.Command, args []string) {
 	wg := sync.WaitGroup{}
 	wg.Add(len(targets))
 
+	failedTargets := make(map[string]error)
+
 	for id, ip := range targets {
-		go executeScpOnTarget(&wg, id, ip)
+		go func(id, ip string) {
+			defer wg.Done()
+
+			err := executeScpOnTarget(id, ip)
+			if err != nil {
+				failedTargets[ip] = err
+			}
+		}(id, ip)
 	}
 
 	wg.Wait()
+
+	for ip, err := range failedTargets {
+		fmt.Printf("Failed for IP %s: %v\n", ip, err)
+	}
+
 	fmt.Println("finish")
 }
 
-func executeScpOnTarget(wg *sync.WaitGroup, id string, ip string) {
-	defer wg.Done()
-
+func executeScpOnTarget(id string, ip string) error {
 	err := scpExec(user, privateKeyPath, id, ip, source, dest, permission)
 	if err != nil {
 		fmt.Printf("error executing on %v: %v\n", ip, err)
+		return err
 	}
+	return nil
 }
 
 func printScpHeader(id, ip, source, dest, permission string) {

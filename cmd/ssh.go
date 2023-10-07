@@ -10,19 +10,16 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var user string
-var privateKeyPath string
-var tagKey string
-var tagValue string
-var command string
+// Global flags
+var user, privateKeyPath, tagKey, tagValue, command string
 
 var sshCmd = &cobra.Command{
 	Use:   "ssh",
 	Short: "Execute SSH command across multiple targets",
-	Run:   runSSH,
+	Run:   executeSSHAcrossTargets,
 }
 
-func runSSH(cmd *cobra.Command, args []string) {
+func executeSSHAcrossTargets(cmd *cobra.Command, args []string) {
 	targets, err := createTargetList(tagKey, tagValue)
 	if err != nil {
 		fmt.Printf("Failed to create target list: %v\n", err)
@@ -31,34 +28,47 @@ func runSSH(cmd *cobra.Command, args []string) {
 
 	wg := sync.WaitGroup{}
 	wg.Add(len(targets))
+	failedTargets := make(map[string]error)
 
 	for id, ip := range targets {
-		go executeSSHOnTarget(&wg, id, ip)
+		go func(id, ip string) {
+			defer wg.Done()
+
+			err := executeSSH(id, ip)
+			if err != nil {
+				failedTargets[ip] = err
+			}
+		}(id, ip)
 	}
 
 	wg.Wait()
+
+	for ip, err := range failedTargets {
+		fmt.Printf("Failed for IP %s: %v\n", ip, err)
+	}
+
 	fmt.Println("finish")
 }
 
-func executeSSHOnTarget(wg *sync.WaitGroup, id string, ip string) {
-	defer wg.Done()
-
-	err := sshExec(user, privateKeyPath, id, ip, command)
+func executeSSH(id string, ip string) error {
+	err := sshExecuteCommand(user, privateKeyPath, id, ip, command)
 	if err != nil {
 		fmt.Printf("Error executing on %v: %v\n", ip, err)
+		return err
 	}
+	return nil
 }
 
-func printSshHeader(id, ip, command string) {
+func displaySSHHeader(id, ip, command string) {
 	fmt.Println(strings.Repeat("-", 10))
-	fmt.Printf("time: %v\n", time.Now().Format("2006-01-02 15:04:05"))
-	fmt.Printf("id: %v\n", id)
-	fmt.Printf("ip: %v\n", ip)
-	fmt.Printf("command: %v\n", command)
+	fmt.Printf("Time: %v\n", time.Now().Format("2006-01-02 15:04:05"))
+	fmt.Printf("ID: %v\n", id)
+	fmt.Printf("IP: %v\n", ip)
+	fmt.Printf("Command: %v\n", command)
 	fmt.Println(strings.Repeat("-", 10))
 }
 
-func sshExec(user, privateKeyPath, id, ip, command string) error {
+func sshExecuteCommand(user, privateKeyPath, id, ip, command string) error {
 	config, err := getSSHConfig(privateKeyPath, user)
 	if err != nil {
 		return fmt.Errorf("failed to get ssh config: %v", err)
@@ -82,7 +92,7 @@ func sshExec(user, privateKeyPath, id, ip, command string) error {
 		return fmt.Errorf("failed to run command: %v", err)
 	}
 
-	printSshHeader(id, ip, command)
+	displaySSHHeader(id, ip, command)
 	fmt.Println(b.String())
 
 	return nil
@@ -91,9 +101,9 @@ func sshExec(user, privateKeyPath, id, ip, command string) error {
 func init() {
 	rootCmd.AddCommand(sshCmd)
 
-	sshCmd.Flags().StringVarP(&user, "user", "u", "ec2-user", "username to execute ssh command")
-	sshCmd.Flags().StringVarP(&privateKeyPath, "private-key", "p", "~/.ssh/id_rsa", "path to private key")
-	sshCmd.Flags().StringVarP(&tagKey, "tag-key", "k", "Name", "tag key")
-	sshCmd.Flags().StringVarP(&tagValue, "tag-value", "v", "", "tag value")
-	sshCmd.Flags().StringVarP(&command, "command", "c", "", "command to execute by ssh")
+	sshCmd.Flags().StringVarP(&user, "user", "u", "ec2-user", "Username for SSH")
+	sshCmd.Flags().StringVarP(&privateKeyPath, "private-key", "p", "~/.ssh/id_rsa", "Path to private key")
+	sshCmd.Flags().StringVarP(&tagKey, "tag-key", "k", "Name", "Tag key")
+	sshCmd.Flags().StringVarP(&tagValue, "tag-value", "v", "", "Tag value")
+	sshCmd.Flags().StringVarP(&command, "command", "c", "", "Command to execute via SSH")
 }

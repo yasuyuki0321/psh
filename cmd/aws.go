@@ -9,17 +9,23 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 )
 
-func createTargetList(tagKey, tagValue string) (map[string]string, error) {
+const (
+	EC2RunningStateCode = 16
+)
 
+func createServiceClient() (svc *ec2.Client, err error) {
 	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion("ap-northeast-1"))
 	if err != nil {
 		return nil, fmt.Errorf("unable to load SDK config, %v", err)
 	}
+	svc = ec2.NewFromConfig(cfg)
 
-	svc := ec2.NewFromConfig(cfg)
+	return svc, nil
+}
+
+func describeInstances(svc *ec2.Client, tagKey, tagValue string) (resp *ec2.DescribeInstancesOutput, err error) {
 	tagFilter := "tag:" + tagKey
-
-	resp, err := svc.DescribeInstances(context.TODO(), &ec2.DescribeInstancesInput{
+	return svc.DescribeInstances(context.TODO(), &ec2.DescribeInstancesInput{
 		Filters: []types.Filter{
 			{
 				Name:   &tagFilter,
@@ -27,22 +33,36 @@ func createTargetList(tagKey, tagValue string) (map[string]string, error) {
 			},
 		},
 	})
+}
+
+func createTargetList(tagKey, tagValue string) (map[string]string, error) {
+	svc, err := createServiceClient()
+	if err != nil {
+		return nil, fmt.Errorf("unable to create service client, %v", err)
+	}
+
+	resp, err := describeInstances(svc, tagKey, tagValue)
 	if err != nil {
 		return nil, fmt.Errorf("unable to describe instances, %v", err)
 	}
 
-	targetList := map[string]string{}
-	for _, reservation := range resp.Reservations {
-		for _, instance := range reservation.Instances {
-			if instance.PublicIpAddress != nil && *instance.State.Code == 16 {
-				targetList[*instance.InstanceId] = *instance.PublicIpAddress
-			}
-		}
-	}
+	targetList := extractTargets(resp)
 
 	if len(targetList) == 0 {
 		return nil, fmt.Errorf("no targets found")
 	}
 
 	return targetList, nil
+}
+
+func extractTargets(resp *ec2.DescribeInstancesOutput) map[string]string {
+	targetList := map[string]string{}
+	for _, reservation := range resp.Reservations {
+		for _, instance := range reservation.Instances {
+			if instance.PublicIpAddress != nil && *instance.State.Code == EC2RunningStateCode {
+				targetList[*instance.InstanceId] = *instance.PublicIpAddress
+			}
+		}
+	}
+	return targetList
 }
