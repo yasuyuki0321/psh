@@ -10,7 +10,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Global flags
 var user, privateKeyPath, tagKey, tagValue, command string
 
 var sshCmd = &cobra.Command{

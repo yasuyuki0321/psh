@@ -15,7 +15,6 @@ import (
 
 var source, dest, permission string
 
-// scpCmd represents the scp command
 var scpCmd = &cobra.Command{
 	Use:   "scp",
 	Short: "A command to perform scp operations across multiple targets",
@@ -114,7 +113,6 @@ func scpExec(outputBuffer *bytes.Buffer, user, privateKeyPath, id, ip, source, d
 	}
 
 	return nil
-
 }
 
 func init() {
