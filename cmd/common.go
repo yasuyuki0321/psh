@@ -1,8 +1,10 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"time"
 
 	"golang.org/x/crypto/ssh"
 )
@@ -28,5 +30,28 @@ func getSSHConfig(privateKeyPath, user string) (*ssh.ClientConfig, error) {
 }
 
 func establishSSHConnection(ip string, config *ssh.ClientConfig) (*ssh.Client, error) {
-	return ssh.Dial("tcp", ip+":22", config)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	resultCh := make(chan *ssh.Client)
+	errorCh := make(chan error)
+
+	go func() {
+		client, err := ssh.Dial("tcp", ip+":22", config)
+		if err != nil {
+			errorCh <- err
+			return
+		}
+		resultCh <- client
+	}()
+
+	select {
+	case <-ctx.Done():
+		return nil, fmt.Errorf("SSH connection timed out after 5 seconds")
+	case err := <-errorCh:
+		return nil, err
+	case client := <-resultCh:
+		return client, nil
+	}
 }
