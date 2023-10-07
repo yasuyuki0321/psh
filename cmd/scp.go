@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
@@ -54,27 +55,28 @@ func runScp(cmd *cobra.Command, args []string) {
 }
 
 func executeScpOnTarget(id string, ip string) error {
-	err := scpExec(user, privateKeyPath, id, ip, source, dest, permission)
+	var outputBuffer bytes.Buffer
+
+	err := scpExec(&outputBuffer, user, privateKeyPath, id, ip, source, dest, permission)
 	if err != nil {
-		fmt.Printf("error executing on %v: %v\n", ip, err)
-		return err
+		outputBuffer.WriteString(fmt.Sprintf("error executing on %v: %v\n", ip, err))
 	}
-	return nil
+	fmt.Print(outputBuffer.String())
+	return err
 }
 
-func printScpHeader(id, ip, source, dest, permission string) {
-	fmt.Println(strings.Repeat("-", 10))
-	fmt.Printf("time: %v\n", time.Now().Format("2006-01-02 15:04:05"))
-	fmt.Printf("id: %v\n", id)
-	fmt.Printf("ip: %v\n", ip)
-	fmt.Printf("source: %v\n", source)
-	fmt.Printf("dest: %v\n", dest)
-	fmt.Printf("permission: %v\n", permission)
-	fmt.Println(strings.Repeat("-", 10))
-	fmt.Println("")
+func printScpHeader(outputBuffer *bytes.Buffer, id, ip, source, dest, permission string) {
+	outputBuffer.WriteString(fmt.Sprintln(strings.Repeat("-", 10)))
+	outputBuffer.WriteString(fmt.Sprintf("Time: %v\n", time.Now().Format("2006-01-02 15:04:05")))
+	outputBuffer.WriteString(fmt.Sprintf("ID: %v\n", id))
+	outputBuffer.WriteString(fmt.Sprintf("IP: %v\n", ip))
+	outputBuffer.WriteString(fmt.Sprintf("Source: %v\n", source))
+	outputBuffer.WriteString(fmt.Sprintf("Destination: %v\n", dest))
+	outputBuffer.WriteString(fmt.Sprintf("Permission: %v\n", permission))
+	outputBuffer.WriteString(fmt.Sprintln(strings.Repeat("-", 10)))
 }
 
-func scpExec(user, privateKeyPath, id, ip, source, dest, permission string) error {
+func scpExec(outputBuffer *bytes.Buffer, user, privateKeyPath, id, ip, source, dest, permission string) error {
 	config, err := getSSHConfig(privateKeyPath, user)
 	if err != nil {
 		return fmt.Errorf("failed to get ssh config: %v", err)
@@ -103,8 +105,16 @@ func scpExec(user, privateKeyPath, id, ip, source, dest, permission string) erro
 		return fmt.Errorf("error while copying file: %v", err)
 	}
 
-	printScpHeader(id, ip, source, dest, permission)
+	printScpHeader(outputBuffer, id, ip, source, dest, permission)
+
+	cmd := "ls -l " + dest
+	err = sshExecuteCommand(outputBuffer, user, privateKeyPath, id, ip, cmd, false)
+	if err != nil {
+		return fmt.Errorf("failed to execute ls command: %v", err)
+	}
+
 	return nil
+
 }
 
 func init() {

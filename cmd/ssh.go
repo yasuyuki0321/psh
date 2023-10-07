@@ -34,10 +34,12 @@ func executeSSHAcrossTargets(cmd *cobra.Command, args []string) {
 		go func(id, ip string) {
 			defer wg.Done()
 
-			err := executeSSH(id, ip)
+			var outputBuffer bytes.Buffer
+			err := executeSSH(&outputBuffer, id, ip)
 			if err != nil {
 				failedTargets[ip] = err
 			}
+			fmt.Print(outputBuffer.String())
 		}(id, ip)
 	}
 
@@ -50,25 +52,20 @@ func executeSSHAcrossTargets(cmd *cobra.Command, args []string) {
 	fmt.Println("finish")
 }
 
-func executeSSH(id string, ip string) error {
-	err := sshExecuteCommand(user, privateKeyPath, id, ip, command)
-	if err != nil {
-		fmt.Printf("Error executing on %v: %v\n", ip, err)
-		return err
-	}
-	return nil
+func executeSSH(outputBuffer *bytes.Buffer, id string, ip string) error {
+	return sshExecuteCommand(outputBuffer, user, privateKeyPath, id, ip, command, true)
 }
 
-func displaySSHHeader(id, ip, command string) {
-	fmt.Println(strings.Repeat("-", 10))
-	fmt.Printf("Time: %v\n", time.Now().Format("2006-01-02 15:04:05"))
-	fmt.Printf("ID: %v\n", id)
-	fmt.Printf("IP: %v\n", ip)
-	fmt.Printf("Command: %v\n", command)
-	fmt.Println(strings.Repeat("-", 10))
+func displaySSHHeader(outputBuffer *bytes.Buffer, id, ip, command string) {
+	outputBuffer.WriteString(fmt.Sprintln(strings.Repeat("-", 10)))
+	outputBuffer.WriteString(fmt.Sprintf("Time: %v\n", time.Now().Format("2006-01-02 15:04:05")))
+	outputBuffer.WriteString(fmt.Sprintf("ID: %v\n", id))
+	outputBuffer.WriteString(fmt.Sprintf("IP: %v\n", ip))
+	outputBuffer.WriteString(fmt.Sprintf("Command: %v\n", command))
+	outputBuffer.WriteString(fmt.Sprintln(strings.Repeat("-", 10)))
 }
 
-func sshExecuteCommand(user, privateKeyPath, id, ip, command string) error {
+func sshExecuteCommand(outputBuffer *bytes.Buffer, user, privateKeyPath, id, ip, command string, displayHeader bool) error {
 	config, err := getSSHConfig(privateKeyPath, user)
 	if err != nil {
 		return fmt.Errorf("failed to get ssh config: %v", err)
@@ -92,8 +89,12 @@ func sshExecuteCommand(user, privateKeyPath, id, ip, command string) error {
 		return fmt.Errorf("failed to run command: %v", err)
 	}
 
-	displaySSHHeader(id, ip, command)
-	fmt.Println(b.String())
+	if displayHeader {
+		displaySSHHeader(outputBuffer, id, ip, command)
+	}
+
+	outputBuffer.WriteString(b.String())
+	outputBuffer.WriteString("\n")
 
 	return nil
 }
