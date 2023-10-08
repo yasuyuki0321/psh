@@ -22,7 +22,7 @@ var scpCmd = &cobra.Command{
 }
 
 func runScp(cmd *cobra.Command, args []string) {
-	targets, err := createTargetList(tagKey, tagValue)
+	targets, err := createTargetList(tagKey, tagValue, ipType)
 	if err != nil {
 		fmt.Printf("Failed to create target list: %v\n", err)
 		return
@@ -53,7 +53,7 @@ func runScp(cmd *cobra.Command, args []string) {
 	fmt.Println("finish")
 }
 
-func executeScpOnTarget(id string, ip string) error {
+func executeScpOnTarget(id, ip string) error {
 	var outputBuffer bytes.Buffer
 
 	err := scpExec(&outputBuffer, user, privateKeyPath, id, ip, source, dest, permission)
@@ -118,10 +118,11 @@ func scpExec(outputBuffer *bytes.Buffer, user, privateKeyPath, id, ip, source, d
 func init() {
 	rootCmd.AddCommand(scpCmd)
 
-	scpCmd.Flags().StringVarP(&user, "user", "u", "ec2-user", "username to execute ssh command")
-	scpCmd.Flags().StringVarP(&privateKeyPath, "private-key", "p", "~/.ssh/id_rsa", "path to private key")
 	scpCmd.Flags().StringVarP(&tagKey, "tag-key", "k", "Name", "tag key")
 	scpCmd.Flags().StringVarP(&tagValue, "tag-value", "v", "", "tag value")
+	scpCmd.Flags().StringVarP(&user, "user", "u", "ec2-user", "username to execute scp command")
+	scpCmd.Flags().StringVarP(&privateKeyPath, "private-key", "p", "~/.ssh/id_rsa", "path to private key")
+	scpCmd.Flags().StringVarP(&ipType, "ip-type", "t", "private", "select IP type: public or private")
 	scpCmd.Flags().StringVarP(&source, "source", "s", "", "source file")
 	scpCmd.Flags().StringVarP(&dest, "dest", "d", "", "dest file")
 	scpCmd.Flags().StringVarP(&permission, "permission", "m", "", "permission")

@@ -10,7 +10,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var user, privateKeyPath, tagKey, tagValue, command string
+var user, privateKeyPath, tagKey, tagValue, ipType, command string
 
 var sshCmd = &cobra.Command{
 	Use:   "ssh",
@@ -19,7 +19,7 @@ var sshCmd = &cobra.Command{
 }
 
 func executeSSHAcrossTargets(cmd *cobra.Command, args []string) {
-	targets, err := createTargetList(tagKey, tagValue)
+	targets, err := createTargetList(tagKey, tagValue, ipType)
 	if err != nil {
 		fmt.Printf("Failed to create target list: %v\n", err)
 		return
@@ -51,7 +51,7 @@ func executeSSHAcrossTargets(cmd *cobra.Command, args []string) {
 	fmt.Println("finish")
 }
 
-func executeSSH(outputBuffer *bytes.Buffer, id string, ip string) error {
+func executeSSH(outputBuffer *bytes.Buffer, id, ip string) error {
 	return sshExecuteCommand(outputBuffer, user, privateKeyPath, id, ip, command, true)
 }
 
@@ -101,9 +101,10 @@ func sshExecuteCommand(outputBuffer *bytes.Buffer, user, privateKeyPath, id, ip,
 func init() {
 	rootCmd.AddCommand(sshCmd)
 
-	sshCmd.Flags().StringVarP(&user, "user", "u", "ec2-user", "Username for SSH")
-	sshCmd.Flags().StringVarP(&privateKeyPath, "private-key", "p", "~/.ssh/id_rsa", "Path to private key")
 	sshCmd.Flags().StringVarP(&tagKey, "tag-key", "k", "Name", "Tag key")
 	sshCmd.Flags().StringVarP(&tagValue, "tag-value", "v", "", "Tag value")
+	sshCmd.Flags().StringVarP(&user, "user", "u", "ec2-user", "Username for SSH")
+	sshCmd.Flags().StringVarP(&privateKeyPath, "private-key", "p", "~/.ssh/id_rsa", "Path to private key")
+	sshCmd.Flags().StringVarP(&ipType, "ip-type", "t", "private", "Select IP type: public or private")
 	sshCmd.Flags().StringVarP(&command, "command", "c", "", "Command to execute via SSH")
 }

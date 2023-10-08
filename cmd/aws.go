@@ -35,7 +35,7 @@ func describeInstances(svc *ec2.Client, tagKey, tagValue string) (resp *ec2.Desc
 	})
 }
 
-func createTargetList(tagKey, tagValue string) (map[string]string, error) {
+func createTargetList(tagKey, tagValue, ipType string) (map[string]string, error) {
 	svc, err := createServiceClient()
 	if err != nil {
 		return nil, fmt.Errorf("unable to create service client, %v", err)
@@ -46,7 +46,10 @@ func createTargetList(tagKey, tagValue string) (map[string]string, error) {
 		return nil, fmt.Errorf("unable to describe instances, %v", err)
 	}
 
-	targetList := extractTargets(resp)
+	targetList, err := extractTargets(resp, ipType)
+	if err != nil {
+		return nil, fmt.Errorf("unable to extract targets, %v", err)
+	}
 
 	if len(targetList) == 0 {
 		return nil, fmt.Errorf("no targets found")
@@ -55,14 +58,25 @@ func createTargetList(tagKey, tagValue string) (map[string]string, error) {
 	return targetList, nil
 }
 
-func extractTargets(resp *ec2.DescribeInstancesOutput) map[string]string {
+func extractTargets(resp *ec2.DescribeInstancesOutput, ipType string) (map[string]string, error) {
 	targetList := map[string]string{}
 	for _, reservation := range resp.Reservations {
 		for _, instance := range reservation.Instances {
-			if instance.PublicIpAddress != nil && *instance.State.Code == EC2RunningStateCode {
-				targetList[*instance.InstanceId] = *instance.PublicIpAddress
+			if *instance.State.Code == EC2RunningStateCode {
+				switch ipType {
+				case "public":
+					if instance.PublicIpAddress != nil {
+						targetList[*instance.InstanceId] = *instance.PublicIpAddress
+					}
+				case "private":
+					if instance.PrivateIpAddress != nil {
+						targetList[*instance.InstanceId] = *instance.PrivateIpAddress
+					}
+				default:
+					return nil, fmt.Errorf("ipType is invalid: %v", ipType)
+				}
 			}
 		}
 	}
-	return targetList
+	return targetList, nil
 }
