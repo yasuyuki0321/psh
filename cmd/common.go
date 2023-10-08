@@ -9,6 +9,8 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
+const timeOut = 5
+
 func getSSHConfig(privateKeyPath, user string) (*ssh.ClientConfig, error) {
 	key, err := os.ReadFile(privateKeyPath)
 	if err != nil {
@@ -31,7 +33,7 @@ func getSSHConfig(privateKeyPath, user string) (*ssh.ClientConfig, error) {
 
 func establishSSHConnection(ip string, config *ssh.ClientConfig) (*ssh.Client, error) {
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), timeOut*time.Second)
 	defer cancel()
 
 	resultCh := make(chan *ssh.Client)
@@ -48,7 +50,7 @@ func establishSSHConnection(ip string, config *ssh.ClientConfig) (*ssh.Client, e
 
 	select {
 	case <-ctx.Done():
-		return nil, fmt.Errorf("SSH connection timed out after 5 seconds")
+		return nil, fmt.Errorf("SSH connection timed out after %d seconds", timeOut)
 	case err := <-errorCh:
 		return nil, err
 	case client := <-resultCh:
