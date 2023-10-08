@@ -67,7 +67,8 @@ jobs:
           echo "RELEASE_EXISTS=false" >> $GITHUB_ENV
         fi
       env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
 
     - name: Upload to existing release
       if: env.RELEASE_EXISTS == 'true'
@@ -78,7 +79,7 @@ jobs:
         artifacts/linux-intel-binary/psh-linux-intel \
         artifacts/linux-arm64-binary/psh-linux-arm64
       env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Create new release
       if: env.RELEASE_EXISTS == 'false'
@@ -90,4 +91,4 @@ jobs:
         artifacts/linux-arm64-binary/psh-linux-arm64 \
         -t ${{ github.ref }} -n "Release ${{ github.ref }}"
       env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
