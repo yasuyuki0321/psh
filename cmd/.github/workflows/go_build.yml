@@ -1,0 +1,48 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    name: Build for ${{ matrix.os }} ${{ matrix.arch }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        goos: [darwin, linux]
+        goarch: [amd64, arm64]
+        include:
+          - goos: darwin
+            goarch: amd64
+            os: macos-intel
+          - goos: darwin
+            goarch: arm64
+            os: macos-apple-silicon
+          - goos: linux
+            goarch: amd64
+            os: linux-intel
+          - goos: linux
+            goarch: arm64
+            os: linux-arm64
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Setup Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.20
+
+    - name: Compile
+      run: |
+        env GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o build/psh-${{ matrix.os }} .
+
+    - name: Archive binary
+      uses: actions/upload-artifact@v2
+      with:
+        name: ${{ matrix.os }}-binary
+        path: build/${{ matrix.os }}-binary
+

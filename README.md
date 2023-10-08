@@ -5,11 +5,15 @@
 - 複数のサーバに対して並列でssh/scpコマンドを実行するためのツールです。
 - サーバの台数が多い場合に短時間での処理が可能になります。
 - サーバの対象はサーバに付与しているタグで指定します。
+- scpの場合、`-z`オプションを付与することで、scp後にファイルの展開を行います。
+  - 下記の拡張子をサポート
+  - .tar / .tar.gz / .gz / .zip
 
 ## 前提
 
 - AWS環境での動作を想定しています。
 - 対象のEC2を抽出するために下記の権限が必要になります。
+- `-z`オプションの使用する場合、リモートサーバ側に展開用のコマンドがインストールされている必要があります。
 
 IAM Policy
 
@@ -55,6 +59,7 @@ Usage:
   psh scp [flags]
 
 Flags:
+  -z, --decompress           Decompress the file after scp
   -d, --dest string          dest file
   -h, --help                 help for scp
   -t, --ip-type string       select IP type: public or private (default "private")

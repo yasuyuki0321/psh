@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -14,6 +15,7 @@ import (
 )
 
 var source, dest, permission string
+var decompress bool
 
 var scpCmd = &cobra.Command{
 	Use:   "scp",
@@ -81,6 +83,8 @@ func printScpHeader(outputBuffer *bytes.Buffer, id, ip, source, dest, permission
 }
 
 func scpExec(outputBuffer *bytes.Buffer, user, privateKeyPath, id, ip, source, dest, permission string) error {
+	var lsCmd string
+
 	config, err := getSSHConfig(privateKeyPath, user)
 	if err != nil {
 		return fmt.Errorf("failed to get ssh config: %v", err)
@@ -111,8 +115,36 @@ func scpExec(outputBuffer *bytes.Buffer, user, privateKeyPath, id, ip, source, d
 
 	printScpHeader(outputBuffer, id, ip, source, dest, permission)
 
-	cmd := "ls -l " + dest
-	err = sshExecuteCommand(outputBuffer, user, privateKeyPath, id, ip, cmd, false)
+	if decompress {
+		decompressCmd, err := getDecompressCommand(dest)
+		if err != nil {
+			return fmt.Errorf("could not get decompress command: %v", err)
+		}
+
+		cmdAvailable, err := isCommandAvailableOnRemote(user, privateKeyPath, ip, strings.Fields(decompressCmd)[0])
+		if err != nil {
+			return fmt.Errorf("error checking command availability: %v", err)
+		}
+
+		if cmdAvailable {
+			err = sshExecuteCommand(outputBuffer, user, privateKeyPath, id, ip, decompressCmd, false)
+			if err != nil {
+				return fmt.Errorf("error decompressing file on %v: %v", ip, err)
+			}
+		} else {
+			return fmt.Errorf("decompression command not available on remote")
+		}
+	}
+
+	switch {
+	case decompress:
+		directory := filepath.Dir(dest)
+		lsCmd = "ls -lart " + directory
+	default:
+		lsCmd = "ls -ltr " + dest
+	}
+
+	err = sshExecuteCommand(outputBuffer, user, privateKeyPath, id, ip, lsCmd, false)
 	if err != nil {
 		return fmt.Errorf("failed to execute ls command: %v", err)
 	}
@@ -131,4 +163,5 @@ func init() {
 	scpCmd.Flags().StringVarP(&source, "source", "s", "", "source file")
 	scpCmd.Flags().StringVarP(&dest, "dest", "d", "", "dest file")
 	scpCmd.Flags().StringVarP(&permission, "permission", "m", "", "permission")
+	scpCmd.Flags().BoolVarP(&decompress, "decompress", "z", false, "Decompress the file after scp")
 }
