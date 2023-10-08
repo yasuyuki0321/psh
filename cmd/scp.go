@@ -22,6 +22,8 @@ var scpCmd = &cobra.Command{
 }
 
 func runScp(cmd *cobra.Command, args []string) {
+	var mtx sync.Mutex
+
 	targets, err := createTargetList(tagKey, tagValue, ipType)
 	if err != nil {
 		fmt.Printf("Failed to create target list: %v\n", err)
@@ -39,15 +41,17 @@ func runScp(cmd *cobra.Command, args []string) {
 
 			err := executeScpOnTarget(id, ip)
 			if err != nil {
+				mtx.Lock()
 				failedTargets[ip] = err
+				mtx.Unlock()
 			}
 		}(id, ip)
 	}
 
 	wg.Wait()
 
-	for ip, err := range failedTargets {
-		fmt.Printf("Failed for IP %s: %v\n", ip, err)
+	for _, err := range failedTargets {
+		fmt.Printf("%v\n", err)
 	}
 
 	fmt.Println("finish")
@@ -58,10 +62,11 @@ func executeScpOnTarget(id, ip string) error {
 
 	err := scpExec(&outputBuffer, user, privateKeyPath, id, ip, source, dest, permission)
 	if err != nil {
-		outputBuffer.WriteString(fmt.Sprintf("error executing on %v: %v\n", ip, err))
+		return fmt.Errorf("error executing on %v: %v", ip, err)
 	}
+
 	fmt.Print(outputBuffer.String())
-	return err
+	return nil
 }
 
 func printScpHeader(outputBuffer *bytes.Buffer, id, ip, source, dest, permission string) {

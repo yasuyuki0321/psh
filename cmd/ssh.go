@@ -19,6 +19,8 @@ var sshCmd = &cobra.Command{
 }
 
 func executeSSHAcrossTargets(cmd *cobra.Command, args []string) {
+	var mtx sync.Mutex
+
 	targets, err := createTargetList(tagKey, tagValue, ipType)
 	if err != nil {
 		fmt.Printf("Failed to create target list: %v\n", err)
@@ -36,7 +38,9 @@ func executeSSHAcrossTargets(cmd *cobra.Command, args []string) {
 			var outputBuffer bytes.Buffer
 			err := executeSSH(&outputBuffer, id, ip)
 			if err != nil {
+				mtx.Lock()
 				failedTargets[ip] = err
+				mtx.Unlock()
 			}
 			fmt.Print(outputBuffer.String())
 		}(id, ip)
