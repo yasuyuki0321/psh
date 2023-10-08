@@ -9,6 +9,22 @@
 ## 前提
 
 - AWS環境での動作を想定しています。
+- 対象のEC2を抽出するために下記の権限が必要になります。
+
+IAM Policy
+
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": "ec2:describeInstances",
+            "Resource": "*"
+        }
+    ]
+}
+```
 
 ## 使用方法
 
