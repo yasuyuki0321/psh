@@ -1,6 +1,6 @@
 package main
 
-import "psh/cmd"
+import "github.com/yasuyuki0321/psh/cmd"
 
 func main() {
 	cmd.Execute()

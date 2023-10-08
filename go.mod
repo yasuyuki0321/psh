@@ -1,4 +1,4 @@
-module psh
+module github.com/yasuyuki0321/psh
 
 go 1.20
 
