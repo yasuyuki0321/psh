@@ -44,5 +44,5 @@ jobs:
       uses: actions/upload-artifact@v2
       with:
         name: ${{ matrix.os }}-binary
-        path: build/${{ matrix.os }}-binary
+        path: build/psh-${{ matrix.os }}
 
