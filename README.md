@@ -5,16 +5,19 @@
 - 複数のサーバに対して並列でssh/scpコマンドを実行するためのツールです。
 - サーバの台数が多い場合に短時間での処理が可能になります。
 - サーバの対象はサーバに付与しているタグで指定します。
-- scpの場合、`-z`オプションを付与することで、scp後にファイルの展開を行います。
+- scpの場合、 `-z` オプションを付与することで、scp後にファイルの展開を行います。
   - 下記の拡張子をサポート
   - .tar / .tar.gz / .gz / .zip
-- spcの際、ディレクトリが存在しない場合は作成することとも可能です。
+- spcの際、 `-c` オプションを付与することでディレクトリが存在しない場合でも、作成することが可能です。
 
 ## 前提
 
 - AWS環境での動作を想定しています。
-- 対象のEC2を抽出するために下記の権限が必要になります。
-- `-z`オプションの使用する場合、リモートサーバ側に展開用のコマンドがインストールされている必要があります。
+- `-z` オプションの使用する場合、リモートサーバ側に展開用のコマンドがインストールされている必要があります。
+  - .tar / .tar.gz: tar
+  - .gz: gunzip
+  - .zip: unzip
+- pshを実行するサーバには、対象のEC2を抽出するために下記の権限が必要になります。
 
 IAM Policy
 
@@ -35,7 +38,7 @@ IAM Policy
 
 ### ssh
 
-```sh
+```text
 Execute SSH command across multiple targets
 
 Usage:
@@ -53,7 +56,7 @@ Flags:
 
 ### scp
 
-```sh
+```text
 A command to perform scp operations across multiple targets
 
 Usage:
@@ -70,13 +73,14 @@ Flags:
   -s, --source string        source file
   -k, --tag-key string       tag key (default "Name")
   -v, --tag-value string     tag value
-  -u, --user string          username to execute scp command (default "ec2-user")```
+  -u, --user string          username to execute scp command (default "ec2-user")
+  ```
 
 ## コマンドの実行例
 
 ### ssh
 
-```sh
+```text
 psh ssh -k Name -v test -p ~/.ssh/yasuyuki0321-rsa.pem -t public -u ec2-user -c "uname -n"                      
 ----------
 Time: 2023-10-08 13:44:13
@@ -99,7 +103,7 @@ finish
 
 ### scp
 
-```sh
+```text
 psh scp -k Name -v test -p ~/.ssh/yasuyuki0321-rsa.pem -t public -u ec2-user -s ./test.txt -d ./test.txt -m 0644
 ----------
 Time: 2023-10-08 13:44:42
@@ -120,4 +124,6 @@ Destination: ./test.txt
 Permission: 0644
 ----------
 -rw-r-xr-x 1 ec2-user ec2-user 10 Oct  8 04:44 ./test.txt
+
+finish
 ```
