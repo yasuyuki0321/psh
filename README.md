@@ -8,6 +8,7 @@
 - scpの場合、`-z`オプションを付与することで、scp後にファイルの展開を行います。
   - 下記の拡張子をサポート
   - .tar / .tar.gz / .gz / .zip
+- spcの際、ディレクトリが存在しない場合は作成することとも可能です。
 
 ## 前提
 
@@ -59,6 +60,7 @@ Usage:
   psh scp [flags]
 
 Flags:
+  -c, --create-dir           Create the directory if it doesn't exist
   -z, --decompress           Decompress the file after scp
   -d, --dest string          dest file
   -h, --help                 help for scp
@@ -68,8 +70,7 @@ Flags:
   -s, --source string        source file
   -k, --tag-key string       tag key (default "Name")
   -v, --tag-value string     tag value
-  -u, --user string          username to execute scp command (default "ec2-user")
-```
+  -u, --user string          username to execute scp command (default "ec2-user")```
 
 ## コマンドの実行例
 

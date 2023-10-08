@@ -15,7 +15,7 @@ import (
 )
 
 var source, dest, permission string
-var decompress bool
+var decompress, createDir bool
 
 var scpCmd = &cobra.Command{
 	Use:   "scp",
@@ -108,6 +108,23 @@ func scpExec(outputBuffer *bytes.Buffer, user, privateKeyPath, id, ip, source, d
 	}
 	defer file.Close()
 
+	destDir := filepath.Dir(dest)
+	exists, err := isDirectoryExistsOnRemote(user, privateKeyPath, ip, destDir)
+	if err != nil {
+		return fmt.Errorf("error checking directory existence: %v", err)
+	}
+	if !exists {
+		if createDir {
+			mkdirCmd := fmt.Sprintf("mkdir -p %s", destDir)
+			err := sshExecuteCommand(outputBuffer, user, privateKeyPath, "", ip, mkdirCmd, false)
+			if err != nil {
+				return fmt.Errorf("failed to create directory %s on %s: %v", destDir, ip, err)
+			}
+		} else {
+			return fmt.Errorf("destination directory %s does not exist on %s", destDir, ip)
+		}
+	}
+
 	err = scpClient.CopyFromFile(context.Background(), *file, dest, permission)
 	if err != nil {
 		return fmt.Errorf("error while copying file: %v", err)
@@ -164,4 +181,5 @@ func init() {
 	scpCmd.Flags().StringVarP(&dest, "dest", "d", "", "dest file")
 	scpCmd.Flags().StringVarP(&permission, "permission", "m", "", "permission")
 	scpCmd.Flags().BoolVarP(&decompress, "decompress", "z", false, "Decompress the file after scp")
+	scpCmd.Flags().BoolVarP(&createDir, "create-dir", "c", false, "Create the directory if it doesn't exist")
 }

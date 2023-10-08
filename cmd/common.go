@@ -1,9 +1,11 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"golang.org/x/crypto/ssh"
@@ -55,5 +57,24 @@ func establishSSHConnection(ip string, config *ssh.ClientConfig) (*ssh.Client, e
 		return nil, err
 	case client := <-resultCh:
 		return client, nil
+	}
+}
+
+func isDirectoryExistsOnRemote(user, privateKeyPath, ip, dirPath string) (bool, error) {
+	checkCmd := fmt.Sprintf("[ -d %s ] && echo 'exists' || echo 'not exists'", dirPath)
+	outputBuffer := &bytes.Buffer{}
+
+	err := sshExecuteCommand(outputBuffer, user, privateKeyPath, "", ip, checkCmd, false)
+	if err != nil {
+		return false, err
+	}
+
+	output := strings.TrimSpace(outputBuffer.String())
+	if output == "exists" {
+		return true, nil
+	} else if output == "not exists" {
+		return false, nil
+	} else {
+		return false, fmt.Errorf("unexpected output: %s", output)
 	}
 }
