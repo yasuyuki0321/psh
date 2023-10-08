@@ -16,6 +16,8 @@ func getDecompressCommand(filePath string) (string, error) {
 		return fmt.Sprintf("cd %s && tar -xzf %s", directory, fileName), nil
 	case strings.HasSuffix(filePath, ".tar"):
 		return fmt.Sprintf("cd %s && tar -xf %s", directory, fileName), nil
+	case strings.HasSuffix(filePath, ".gz"):
+		return fmt.Sprintf("cd %s && gunzip -df %s", directory, fileName), nil
 	case strings.HasSuffix(filePath, ".zip"):
 		return fmt.Sprintf("cd %s && unzip %s", directory, fileName), nil
 	default:
