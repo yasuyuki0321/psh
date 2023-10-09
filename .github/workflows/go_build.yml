@@ -61,14 +61,14 @@ jobs:
     - name: Check if release exists
       id: check_release
       run: |
-        if gh release view ${{ github.ref }}; then
+        TAG_NAME=${{ github.ref#refs/tags/ }}
+        if gh release view $TAG_NAME; then
           echo "RELEASE_EXISTS=true" >> $GITHUB_ENV
         else
           echo "RELEASE_EXISTS=false" >> $GITHUB_ENV
         fi
       env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Upload to existing release
       if: env.RELEASE_EXISTS == 'true'
@@ -79,7 +79,7 @@ jobs:
         artifacts/linux-intel-binary/psh-linux-intel \
         artifacts/linux-arm64-binary/psh-linux-arm64
       env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Create new release
       if: env.RELEASE_EXISTS == 'false'
@@ -91,4 +91,4 @@ jobs:
         artifacts/linux-arm64-binary/psh-linux-arm64 \
         -t ${{ github.ref }} -n "Release ${{ github.ref }}"
       env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
