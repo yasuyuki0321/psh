@@ -62,10 +62,10 @@ jobs:
       with:
         path: artifacts
 
-    - name: List all downloaded artifacts
-      id: list_artifacts
+    - name: Create artifact list
       run: |
-        echo "ARTIFACTS_LIST=$(ls artifacts/*.tar.gz | tr '\n' ' ')" >> $GITHUB_ENV
+        ARTIFACTS_LIST=$(echo artifacts/*.tar.gz | tr ' ' ':')
+        echo "ARTIFACTS_LIST=${ARTIFACTS_LIST}" >> $GITHUB_ENV
 
     - name: Extract tag name
       run: echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
@@ -84,7 +84,7 @@ jobs:
     - name: Upload to existing release
       if: env.RELEASE_EXISTS == 'true'
       run: |
-        for artifact in $ARTIFACTS_LIST; do
+        for artifact in $(echo $ARTIFACTS_LIST | tr ':' ' '); do
           gh release upload $TAG_NAME $artifact
         done
       env:
@@ -93,7 +93,7 @@ jobs:
     - name: Create new release
       if: env.RELEASE_EXISTS == 'false'
       run: |
-        for artifact in $ARTIFACTS_LIST; do
+        for artifact in $(echo $ARTIFACTS_LIST | tr ':' ' '); do
           gh release create $TAG_NAME $artifact
         done
       env:
