@@ -58,10 +58,12 @@ jobs:
       with:
         path: artifacts
 
+    - name: Extract tag name
+      run: echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+
     - name: Check if release exists
       id: check_release
       run: |
-        TAG_NAME=${{ replace(github.ref, 'refs/tags/', '') }}
         if gh release view $TAG_NAME; then
           echo "RELEASE_EXISTS=true" >> $GITHUB_ENV
         else
