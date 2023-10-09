@@ -71,21 +71,14 @@ jobs:
 
       - name: Handle release
         run: |
-          artifacts_list=(artifacts/*/*.tar.gz)
+          artifacts_list=(artifacts/*/*.tar.gz artifacts/*.tar.gz)
           for artifact in "${artifacts_list[@]}"; do
-            if [[ $RELEASE_EXISTS == "true" ]]; then
-              gh release upload $TAG_NAME $artifact --name "$(basename $artifact)"
-            else
-              gh release create $TAG_NAME $artifact --name "$(basename $artifact)"
-            fi
-          done
-
-          artifacts_list=(artifacts/*.tar.gz)
-          for artifact in "${artifacts_list[@]}"; do
-            if [[ $RELEASE_EXISTS == "true" ]]; then
-              gh release upload $TAG_NAME $artifact
-            else
-              gh release create $TAG_NAME $artifact
+            if [[ -f "$artifact" ]]; then
+              if [[ $RELEASE_EXISTS == "true" ]]; then
+                gh release upload $TAG_NAME $artifact
+              else
+                gh release create $TAG_NAME $artifact
+              fi
             fi
           done
         env:
