@@ -61,7 +61,7 @@ jobs:
     - name: Check if release exists
       id: check_release
       run: |
-        TAG_NAME=${{ github.ref#refs/tags/ }}
+        TAG_NAME=${{ replace(github.ref, 'refs/tags/', '') }}
         if gh release view $TAG_NAME; then
           echo "RELEASE_EXISTS=true" >> $GITHUB_ENV
         else
