@@ -67,6 +67,9 @@ jobs:
       run: |
         echo "ARTIFACTS_LIST=$(ls artifacts/*.tar.gz | tr '\n' ' ')" >> $GITHUB_ENV
 
+    - name: Extract tag name
+      run: echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+
     - name: Check if release exists
       id: check_release
       run: |
