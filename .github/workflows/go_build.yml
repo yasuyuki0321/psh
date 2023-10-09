@@ -75,7 +75,7 @@ jobs:
     - name: Upload to existing release
       if: env.RELEASE_EXISTS == 'true'
       run: |
-        gh release upload ${{ github.ref }} \
+        gh release upload $TAG_NAME \
         artifacts/macos-intel-binary/psh-macos-intel \
         artifacts/macos-apple-silicon-binary/psh-macos-apple-silicon \
         artifacts/linux-intel-binary/psh-linux-intel \
@@ -86,7 +86,7 @@ jobs:
     - name: Create new release
       if: env.RELEASE_EXISTS == 'false'
       run: |
-        gh release create ${{ github.ref }} \
+        gh release create $TAG_NAME \
         artifacts/macos-intel-binary/psh-macos-intel \
         artifacts/macos-apple-silicon-binary/psh-macos-apple-silicon \
         artifacts/linux-intel-binary/psh-linux-intel \
