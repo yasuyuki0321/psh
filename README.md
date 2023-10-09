@@ -37,9 +37,17 @@ IAM Policy
 ## インストール方法
 
 ```sh
-wget https://github.com/yasuyuki0321/psh/releases/download/${varsion}/psh-macos-apple-silicon
+version="v0.1.0"
+arch="darwin-arm64"
 
+curl -L https://github.com/yasuyuki0321/psh/releases/download/${version}/psh-${arch}.tar.gz | tar zxvf -
+chmod 755 psh-${arch}
+
+ln -s ./psh-${arch} ./psh
+mv ./psh-${arch} /bin/
 ```
+
+※ 必要に応じて `/bin` 等、PATHの通っているディレクトリに配置してください。
 
 ## 使用方法
 
