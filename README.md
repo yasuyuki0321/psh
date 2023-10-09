@@ -34,6 +34,13 @@ IAM Policy
 }
 ```
 
+## インストール方法
+
+```sh
+wget https://github.com/yasuyuki0321/psh/releases/download/${varsion}/psh-macos-apple-silicon
+
+```
+
 ## 使用方法
 
 ### ssh

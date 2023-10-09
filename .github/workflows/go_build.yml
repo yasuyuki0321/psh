@@ -16,13 +16,13 @@ jobs:
         include:
           - goos: darwin
             goarch: amd64
-            os: macos-intel
+            os: darwin-amd64
           - goos: darwin
             goarch: arm64
-            os: macos-apple-silicon
+            os: darwin-arm64
           - goos: linux
             goarch: amd64
-            os: linux-intel
+            os: linux-amd64
           - goos: linux
             goarch: arm64
             os: linux-arm64
@@ -40,11 +40,15 @@ jobs:
       run: |
         env GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o build/psh-${{ matrix.os }} .
 
+    - name: Tar and gzip the binary
+      run: |
+        tar -czvf build/psh-${{ matrix.os }}.tar.gz -C build psh-${{ matrix.os }}
+
     - name: Upload artifact
       uses: actions/upload-artifact@v2
       with:
-        name: ${{ matrix.os }}-binary
-        path: build/psh-${{ matrix.os }}
+        name: ${{ matrix.os }}.tar.gz
+        path: build/psh-${{ matrix.os }}.tar.gz
 
   create-release:
     needs: build-and-upload-artifacts
@@ -75,22 +79,13 @@ jobs:
     - name: Upload to existing release
       if: env.RELEASE_EXISTS == 'true'
       run: |
-        gh release upload $TAG_NAME \
-        artifacts/macos-intel-binary/psh-macos-intel \
-        artifacts/macos-apple-silicon-binary/psh-macos-apple-silicon \
-        artifacts/linux-intel-binary/psh-linux-intel \
-        artifacts/linux-arm64-binary/psh-linux-arm64
+        gh release upload $TAG_NAME artifacts/${{ matrix.os }}/psh-${{ matrix.os }}
       env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Create new release
       if: env.RELEASE_EXISTS == 'false'
       run: |
-        gh release create $TAG_NAME \
-        artifacts/macos-intel-binary/psh-macos-intel \
-        artifacts/macos-apple-silicon-binary/psh-macos-apple-silicon \
-        artifacts/linux-intel-binary/psh-linux-intel \
-        artifacts/linux-arm64-binary/psh-linux-arm64 \
-        -t ${{ github.ref }} -n "Release ${{ github.ref }}"
+        gh release create $TAG_NAME artifacts/${{ matrix.os }}/psh-${{ matrix.os }} -t ${{ github.ref }} -n "Release ${{ github.ref }}"
       env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
