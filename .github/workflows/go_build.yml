@@ -13,88 +13,62 @@ jobs:
       matrix:
         goos: [darwin, linux]
         goarch: [amd64, arm64]
-        include:
-          - goos: darwin
-            goarch: amd64
-            os: darwin-amd64
-          - goos: darwin
-            goarch: arm64
-            os: darwin-arm64
-          - goos: linux
-            goarch: amd64
-            os: linux-amd64
-          - goos: linux
-            goarch: arm64
-            os: linux-arm64
+        os: [darwin-amd64, darwin-arm64, linux-amd64, linux-arm64]
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v2
 
-    - name: Setup Go
-      uses: actions/setup-go@v2
-      with:
-        go-version: '^1.20'
+      - name: Setup Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: '^1.20'
 
-    - name: Compile
-      run: |
-        env GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o build/psh-${{ matrix.os }} .
+      - name: Compile and Tar
+        run: |
+          env GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o build/psh-${{ matrix.os }} .
+          tar -czvf build/psh-${{ matrix.os }}.tar.gz -C build psh-${{ matrix.os }}
 
-    - name: Tar and gzip the binary
-      run: |
-        tar -czvf build/psh-${{ matrix.os }}.tar.gz -C build psh-${{ matrix.os }}
-
-    - name: Upload artifact
-      uses: actions/upload-artifact@v2
-      with:
-        name: ${{ matrix.os }}.tar.gz
-        path: build/psh-${{ matrix.os }}.tar.gz
+      - name: Upload artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ matrix.os }}.tar.gz
+          path: build/psh-${{ matrix.os }}.tar.gz
 
   create-release:
     needs: build-and-upload-artifacts
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v2
 
-    - name: Download all artifacts
-      uses: actions/download-artifact@v2
-      with:
-        path: artifacts
+      - name: Download all artifacts
+        uses: actions/download-artifact@v2
+        with:
+          path: artifacts
 
-    - name: Create artifact list
-      run: |
-        ARTIFACTS_LIST=$(echo artifacts/*.tar.gz | tr ' ' ':')
-        echo "ARTIFACTS_LIST=${ARTIFACTS_LIST}" >> $GITHUB_ENV
+      - name: Extract tag name
+        run: echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
 
-    - name: Extract tag name
-      run: echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+      - name: Check if release exists
+        run: |
+          if gh release view $TAG_NAME; then
+            echo "RELEASE_EXISTS=true" >> $GITHUB_ENV
+          else
+            echo "RELEASE_EXISTS=false" >> $GITHUB_ENV
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Check if release exists
-      id: check_release
-      run: |
-        if gh release view $TAG_NAME; then
-          echo "RELEASE_EXISTS=true" >> $GITHUB_ENV
-        else
-          echo "RELEASE_EXISTS=false" >> $GITHUB_ENV
-        fi
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: Upload to existing release
-      if: env.RELEASE_EXISTS == 'true'
-      run: |
-        for artifact in $(echo $ARTIFACTS_LIST | tr ':' ' '); do
-          gh release upload $TAG_NAME $artifact
-        done
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: Create new release
-      if: env.RELEASE_EXISTS == 'false'
-      run: |
-        for artifact in $(echo $ARTIFACTS_LIST | tr ':' ' '); do
-          gh release create $TAG_NAME $artifact
-        done
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Handle release
+        run: |
+          artifacts_list=(artifacts/*.tar.gz)
+          for artifact in "${artifacts_list[@]}"; do
+            if [[ $RELEASE_EXISTS == "true" ]]; then
+              gh release upload $TAG_NAME $artifact
+            else
+              gh release create $TAG_NAME $artifact
+            fi
+          done
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
