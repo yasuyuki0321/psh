@@ -2,22 +2,23 @@
 
 ## 概要
 
-- 複数のサーバに対して並列でssh/scpコマンドを実行するためのツールです。
-- サーバの台数が多い場合に短時間での処理が可能になります。
-- サーバの対象はサーバに付与しているタグで指定します。
-- scpの場合、 `-z` オプションを付与することで、scp後にファイルの展開を行います。
+- 複数のサーバに対して並列でssh/scpコマンドを実行するためのツール
+- サーバの台数が多い場合に短時間での処理が可能
+- サーバの対象はサーバに付与しているタグで指定する
+  - タグはカンマ区切りで複数指定可能
+- scpの場合、 `-z` オプションを付与することで、scp後にファイルの展開を行う
   - 下記の拡張子をサポート
   - .tar / .tar.gz / .gz / .zip
-- spcの際、 `-c` オプションを付与することでディレクトリが存在しない場合でも、作成することが可能です。
+- spcの際、 `-c` オプションを付与することでディレクトリが存在しない場合でも、作成することが可能
 
 ## 前提
 
-- AWS環境での動作を想定しています。
-- `-z` オプションの使用する場合、リモートサーバ側に展開用のコマンドがインストールされている必要があります。
+- AWS環境での動作を想定している
+- `-z` オプションの使用する場合、リモートサーバ側に展開用のコマンドがインストールされている必要がある
   - .tar / .tar.gz: tar
   - .gz: gunzip
   - .zip: unzip
-- pshを実行するサーバには、対象のEC2を抽出するために下記の権限が必要になります。
+- pshを実行するサーバには、対象のEC2を抽出するために下記の権限が必要になる
 
 IAM Policy
 
@@ -43,11 +44,10 @@ arch="darwin-arm64"
 curl -L https://github.com/yasuyuki0321/psh/releases/download/${version}/psh-${arch}.tar.gz | tar zxvf -
 chmod 755 psh-${arch}
 
+※ 必要に応じてリンクを作成したり、`/bin` 等、PATHの通っているディレクトリに配置する
 ln -s ./psh-${arch} ./psh
 mv ./psh-${arch} /bin/
 ```
-
-※ 必要に応じて `/bin` 等、PATHの通っているディレクトリに配置してください。
 
 ## 使用方法
 
@@ -60,13 +60,12 @@ Usage:
   psh ssh [flags]
 
 Flags:
-  -c, --command string       Command to execute via SSH
+  -c, --command string       command to execute via SSH
   -h, --help                 help for ssh
-  -t, --ip-type string       Select IP type: public or private (default "private")
-  -p, --private-key string   Path to private key (default "~/.ssh/id_rsa")
-  -k, --tag-key string       Tag key (default "Name")
-  -v, --tag-value string     Tag value
-  -u, --user string          Username for SSH (default "ec2-user")
+  -i, --ip-type string       select IP type: public or private (default "private")
+  -k, --private-key string   path to private key (default "~/.ssh/id_rsa")
+  -t, --tags string          comma-separated list of tag key=value pairs Example: Key1=Value1,Key2=Value2
+  -u, --user string          username for SSH (default "ec2-user")
 ```
 
 ### scp
@@ -78,40 +77,39 @@ Usage:
   psh scp [flags]
 
 Flags:
-  -c, --create-dir           Create the directory if it doesn't exist
-  -z, --decompress           Decompress the file after scp
+  -c, --create-dir           create the directory if it doesn't exist
+  -z, --decompress           decompress the file after SCP
   -d, --dest string          dest file
   -h, --help                 help for scp
-  -t, --ip-type string       select IP type: public or private (default "private")
+  -i, --ip-type string       select IP type: public or private (default "private")
   -m, --permission string    permission
-  -p, --private-key string   path to private key (default "~/.ssh/id_rsa")
+  -k, --private-key string   path to private key (default "~/.ssh/id_rsa")
   -s, --source string        source file
-  -k, --tag-key string       tag key (default "Name")
-  -v, --tag-value string     tag value
-  -u, --user string          username to execute scp command (default "ec2-user")
-  ```
+  -t, --tags string          comma-separated list of tag key=value pairs. Example: Key1=Value1,Key2=Value2
+  -u, --user string          username to execute SCP command (default "ec2-user")
+```
 
 ## コマンドの実行例
 
 ### ssh
 
 ```text
-psh ssh -k Name -v test -p ~/.ssh/yasuyuki0321-rsa.pem -t public -u ec2-user -c "uname -n"                      
+$ psh ssh -t Name=test,ssh=true -p ~/.ssh/yasuyuki0321-rsa.pem -i public -u ec2-user -c "uname -n"
 ----------
-Time: 2023-10-08 13:44:13
-ID: i-0a9ad44aa54f06a79
-IP: 13.112.249.250
-Command: uname -n
-----------
-ip-10-0-0-39.ap-northeast-1.compute.internal
-
-----------
-Time: 2023-10-08 13:44:13
+Time: 2023-10-11 23:23:54
 ID: i-068112822e1c8efd8
-IP: 18.179.36.241
+IP: 54.199.210.116
 Command: uname -n
 ----------
 ip-10-0-0-113.ap-northeast-1.compute.internal
+
+----------
+Time: 2023-10-11 23:23:54
+ID: i-0a9ad44aa54f06a79
+IP: 43.207.232.233
+Command: uname -n
+----------
+ip-10-0-0-39.ap-northeast-1.compute.internal
 
 finish
 ```
@@ -119,26 +117,26 @@ finish
 ### scp
 
 ```text
-psh scp -k Name -v test -p ~/.ssh/yasuyuki0321-rsa.pem -t public -u ec2-user -s ./test.txt -d ./test.txt -m 0644
+$ psh scp -t Name=test,ssh=true -k ~/.ssh/yasuyuki0321-rsa.pem -i public -u ec2-user -s ./test.txt -d ./test.txt -m 0644         
 ----------
-Time: 2023-10-08 13:44:42
+Time: 2023-10-11 23:26:21
 ID: i-0a9ad44aa54f06a79
-IP: 13.112.249.250
+IP: 43.207.232.233
 Source: ./test.txt
 Destination: ./test.txt
 Permission: 0644
 ----------
--rw-r--r-- 1 ec2-user ec2-user 10 Oct  8 04:44 ./test.txt
+-rw-r--r-- 1 ec2-user ec2-user 0 Oct 11 14:26 ./test.txt
 
 ----------
-Time: 2023-10-08 13:44:42
+Time: 2023-10-11 23:26:21
 ID: i-068112822e1c8efd8
-IP: 18.179.36.241
+IP: 54.199.210.116
 Source: ./test.txt
 Destination: ./test.txt
 Permission: 0644
 ----------
--rw-r-xr-x 1 ec2-user ec2-user 10 Oct  8 04:44 ./test.txt
+-rw-r--r-- 1 ec2-user ec2-user 0 Oct 11 14:26 ./test.txt
 
 finish
 ```

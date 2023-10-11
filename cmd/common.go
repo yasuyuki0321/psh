@@ -13,6 +13,19 @@ import (
 
 const timeOut = 5
 
+func ParseTags(tags string) map[string]string {
+	tagMap := make(map[string]string)
+
+	pairs := strings.Split(tags, ",")
+	for _, pair := range pairs {
+		parts := strings.SplitN(pair, "=", 2)
+		if len(parts) == 2 {
+			tagMap[parts[0]] = parts[1]
+		}
+	}
+	return tagMap
+}
+
 func getSSHConfig(privateKeyPath, user string) (*ssh.ClientConfig, error) {
 	key, err := os.ReadFile(privateKeyPath)
 	if err != nil {

@@ -26,7 +26,8 @@ var scpCmd = &cobra.Command{
 func runScp(cmd *cobra.Command, args []string) {
 	var mtx sync.Mutex
 
-	targets, err := createTargetList(tagKey, tagValue, ipType)
+	tags := ParseTags(tags)
+	targets, err := createTargetList(tags, ipType)
 	if err != nil {
 		fmt.Printf("Failed to create target list: %v\n", err)
 		return
@@ -172,14 +173,13 @@ func scpExec(outputBuffer *bytes.Buffer, user, privateKeyPath, id, ip, source, d
 func init() {
 	rootCmd.AddCommand(scpCmd)
 
-	scpCmd.Flags().StringVarP(&tagKey, "tag-key", "k", "Name", "tag key")
-	scpCmd.Flags().StringVarP(&tagValue, "tag-value", "v", "", "tag value")
-	scpCmd.Flags().StringVarP(&user, "user", "u", "ec2-user", "username to execute scp command")
-	scpCmd.Flags().StringVarP(&privateKeyPath, "private-key", "p", "~/.ssh/id_rsa", "path to private key")
-	scpCmd.Flags().StringVarP(&ipType, "ip-type", "t", "private", "select IP type: public or private")
+	scpCmd.Flags().StringVarP(&tags, "tags", "t", "", "comma-separated list of tag key=value pairs. Example: Key1=Value1,Key2=Value2")
+	scpCmd.Flags().StringVarP(&user, "user", "u", "ec2-user", "username to execute SCP command")
+	scpCmd.Flags().StringVarP(&privateKeyPath, "private-key", "k", "~/.ssh/id_rsa", "path to private key")
+	scpCmd.Flags().StringVarP(&ipType, "ip-type", "i", "private", "select IP type: public or private")
 	scpCmd.Flags().StringVarP(&source, "source", "s", "", "source file")
 	scpCmd.Flags().StringVarP(&dest, "dest", "d", "", "dest file")
 	scpCmd.Flags().StringVarP(&permission, "permission", "m", "", "permission")
-	scpCmd.Flags().BoolVarP(&decompress, "decompress", "z", false, "Decompress the file after scp")
-	scpCmd.Flags().BoolVarP(&createDir, "create-dir", "c", false, "Create the directory if it doesn't exist")
+	scpCmd.Flags().BoolVarP(&decompress, "decompress", "z", false, "decompress the file after SCP")
+	scpCmd.Flags().BoolVarP(&createDir, "create-dir", "c", false, "create the directory if it doesn't exist")
 }

@@ -23,25 +23,29 @@ func createServiceClient() (svc *ec2.Client, err error) {
 	return svc, nil
 }
 
-func describeInstances(svc *ec2.Client, tagKey, tagValue string) (resp *ec2.DescribeInstancesOutput, err error) {
-	tagFilter := "tag:" + tagKey
+func describeInstances(svc *ec2.Client, tags map[string]string) (resp *ec2.DescribeInstancesOutput, err error) {
+	var filters []types.Filter
+
+	for key, value := range tags {
+		tagFilter := "tag:" + key
+		filters = append(filters, types.Filter{
+			Name:   &tagFilter,
+			Values: []string{value},
+		})
+	}
+
 	return svc.DescribeInstances(context.TODO(), &ec2.DescribeInstancesInput{
-		Filters: []types.Filter{
-			{
-				Name:   &tagFilter,
-				Values: []string{tagValue},
-			},
-		},
+		Filters: filters,
 	})
 }
 
-func createTargetList(tagKey, tagValue, ipType string) (map[string]string, error) {
+func createTargetList(tags map[string]string, ipType string) (map[string]string, error) {
 	svc, err := createServiceClient()
 	if err != nil {
 		return nil, fmt.Errorf("unable to create service client, %v", err)
 	}
 
-	resp, err := describeInstances(svc, tagKey, tagValue)
+	resp, err := describeInstances(svc, tags)
 	if err != nil {
 		return nil, fmt.Errorf("unable to describe instances, %v", err)
 	}
