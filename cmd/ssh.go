@@ -11,10 +11,11 @@ import (
 )
 
 var user, privateKeyPath, tags, ipType, command string
+var yes bool
 
 var sshCmd = &cobra.Command{
 	Use:   "ssh",
-	Short: "Execute SSH command across multiple targets",
+	Short: "execute SSH command across multiple targets",
 	Run:   executeSSHAcrossTargets,
 }
 
@@ -26,6 +27,23 @@ func executeSSHAcrossTargets(cmd *cobra.Command, args []string) {
 	if err != nil {
 		fmt.Printf("Failed to create target list: %v\n", err)
 		return
+	}
+
+	if !yes {
+		fmt.Println("Targets:")
+		for id, ip := range targets {
+			fmt.Printf("ID: %s / IP: %s\n", id, ip)
+		}
+		fmt.Printf("\nCommand: %s\n", command)
+
+		fmt.Print("\nDo you want to continue? [y/N]: ")
+		var response string
+		fmt.Scan(&response)
+
+		if strings.ToLower(response) != "y" {
+			fmt.Println("Operation aborted.")
+			return
+		}
 	}
 
 	wg := sync.WaitGroup{}
@@ -111,4 +129,5 @@ func init() {
 	sshCmd.Flags().StringVarP(&privateKeyPath, "private-key", "k", "~/.ssh/id_rsa", "path to private key")
 	sshCmd.Flags().StringVarP(&ipType, "ip-type", "i", "private", "select IP type: public or private")
 	sshCmd.Flags().StringVarP(&command, "command", "c", "", "command to execute via SSH")
+	sshCmd.Flags().BoolVarP(&yes, "yes", "y", false, "skip the preview and execute the command directly")
 }

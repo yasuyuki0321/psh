@@ -19,8 +19,29 @@ var decompress, createDir bool
 
 var scpCmd = &cobra.Command{
 	Use:   "scp",
-	Short: "A command to perform scp operations across multiple targets",
+	Short: "execute scp operations across multiple targets",
 	Run:   runScp,
+}
+
+func displayScpPreview(targets map[string]string) bool {
+	fmt.Println("Targets:")
+	for id, ip := range targets {
+		fmt.Printf("ID: %s / IP: %s\n", id, ip)
+	}
+
+	fmt.Printf("\nSource: %s\nDestination: %s\nPermission: %s\n", source, dest, permission)
+	if decompress {
+		fmt.Println("Decompression: Enabled")
+	}
+	if createDir {
+		fmt.Println("Directory Creation: Enabled")
+	}
+
+	fmt.Print("\nDo you want to continue? [y/N]: ")
+	var response string
+	fmt.Scan(&response)
+
+	return strings.ToLower(response) == "y"
 }
 
 func runScp(cmd *cobra.Command, args []string) {
@@ -31,6 +52,13 @@ func runScp(cmd *cobra.Command, args []string) {
 	if err != nil {
 		fmt.Printf("Failed to create target list: %v\n", err)
 		return
+	}
+
+	if !yes {
+		if !displayScpPreview(targets) {
+			fmt.Println("Operation aborted.")
+			return
+		}
 	}
 
 	wg := sync.WaitGroup{}
@@ -182,4 +210,5 @@ func init() {
 	scpCmd.Flags().StringVarP(&permission, "permission", "m", "", "permission")
 	scpCmd.Flags().BoolVarP(&decompress, "decompress", "z", false, "decompress the file after SCP")
 	scpCmd.Flags().BoolVarP(&createDir, "create-dir", "c", false, "create the directory if it doesn't exist")
+	scpCmd.Flags().BoolVarP(&yes, "yes", "y", false, "skip the preview and execute the SCP directly")
 }
