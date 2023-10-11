@@ -46,7 +46,7 @@ arch="darwin-arm64"
 curl -L https://github.com/yasuyuki0321/psh/releases/download/${version}/psh-${arch}.tar.gz | tar zxvf -
 chmod 755 psh-${arch}
 
-※ 必要に応じてリンクを作成したり、`/bin` 等、PATHの通っているディレクトリに配置する
+※ 必要に応じてリンクを作成したり、/bin等、PATHの通っているディレクトリに配置する
 ln -s ./psh-${arch} ./psh
 mv ./psh-${arch} /bin/
 ```
