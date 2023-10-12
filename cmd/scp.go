@@ -47,6 +47,16 @@ func displayScpPreview(targets map[string]InstanceInfo) bool {
 func runScp(cmd *cobra.Command, args []string) {
 	var mtx sync.Mutex
 
+	if tags == "" {
+		fmt.Print("You have not specified any tags. This will execute scp command to ALL EC2 instances. Continue? [y/N]: ")
+		var response string
+		fmt.Scan(&response)
+		if strings.ToLower(response) != "y" {
+			fmt.Println("Operation aborted.")
+			return
+		}
+	}
+
 	tags := ParseTags(tags)
 	targets, err := createTargetList(tags, ipType)
 	if err != nil {
@@ -67,7 +77,7 @@ func runScp(cmd *cobra.Command, args []string) {
 	failedTargets := make(map[string]error)
 
 	for target, value := range targets {
-		go func(id, ip string) {
+		go func(target string, value InstanceInfo) {
 			defer wg.Done()
 
 			err := executeScpOnTarget(target, value.IP)
@@ -76,7 +86,7 @@ func runScp(cmd *cobra.Command, args []string) {
 				failedTargets[value.IP] = err
 				mtx.Unlock()
 			}
-		}(target, value.IP)
+		}(target, value)
 	}
 
 	wg.Wait()

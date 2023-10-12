@@ -22,6 +22,16 @@ var sshCmd = &cobra.Command{
 func executeSSHAcrossTargets(cmd *cobra.Command, args []string) {
 	var mtx sync.Mutex
 
+	if tags == "" {
+		fmt.Print("You have not specified any tags. This will execute the command on ALL EC2 instances. Continue? [y/N]: ")
+		var response string
+		fmt.Scan(&response)
+		if strings.ToLower(response) != "y" {
+			fmt.Println("Operation aborted.")
+			return
+		}
+	}
+
 	tags := ParseTags(tags)
 	targets, err := createTargetList(tags, ipType)
 	if err != nil {
@@ -48,27 +58,27 @@ func executeSSHAcrossTargets(cmd *cobra.Command, args []string) {
 
 	wg := sync.WaitGroup{}
 	wg.Add(len(targets))
-	failedTargets := make(map[string]error)
+	failedTargets := make(map[InstanceInfo]error)
 
 	for target, value := range targets {
-		go func(id, ip string) {
+		go func(target string, value InstanceInfo) {
 			defer wg.Done()
 
 			var outputBuffer bytes.Buffer
 			err := executeSSH(&outputBuffer, target, value.IP)
 			if err != nil {
 				mtx.Lock()
-				failedTargets[ip] = err
+				failedTargets[value] = err
 				mtx.Unlock()
 			}
 			fmt.Print(outputBuffer.String())
-		}(target, value.IP)
+		}(target, value)
 	}
 
 	wg.Wait()
 
-	for ip, err := range failedTargets {
-		fmt.Printf("Failed for IP %s: %v\n", ip, err)
+	for target, value := range failedTargets {
+		fmt.Printf("Failed for Name: %s / IP: %s: err: %v", target.Name, target.IP, value)
 	}
 
 	fmt.Println("finish")
@@ -129,5 +139,6 @@ func init() {
 	sshCmd.Flags().StringVarP(&privateKeyPath, "private-key", "k", "~/.ssh/id_rsa", "path to private key")
 	sshCmd.Flags().StringVarP(&ipType, "ip-type", "i", "private", "select IP type: public or private")
 	sshCmd.Flags().StringVarP(&command, "command", "c", "", "command to execute via SSH")
+	sshCmd.MarkFlagRequired("command")
 	sshCmd.Flags().BoolVarP(&yes, "yes", "y", false, "skip the preview and execute the command directly")
 }
