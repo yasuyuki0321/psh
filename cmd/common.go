@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -26,8 +27,21 @@ func ParseTags(tags string) map[string]string {
 	return tagMap
 }
 
+func getHomePath(path string) string {
+	if path[:2] != "~/" {
+		return path
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		panic(err)
+	}
+	return filepath.Join(home, path[2:])
+}
+
 func getSSHConfig(privateKeyPath, user string) (*ssh.ClientConfig, error) {
-	key, err := os.ReadFile(privateKeyPath)
+	keyPath := getHomePath(privateKeyPath)
+
+	key, err := os.ReadFile(keyPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read private key from %s: %v", privateKeyPath, err)
 	}
