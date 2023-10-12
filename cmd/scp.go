@@ -23,10 +23,10 @@ var scpCmd = &cobra.Command{
 	Run:   runScp,
 }
 
-func displayScpPreview(targets map[string]string) bool {
+func displayScpPreview(targets map[string]InstanceInfo) bool {
 	fmt.Println("Targets:")
-	for id, ip := range targets {
-		fmt.Printf("ID: %s / IP: %s\n", id, ip)
+	for target, value := range targets {
+		fmt.Printf("Name: %s / ID: %s / IP: %s\n", value.Name, target, value.IP)
 	}
 
 	fmt.Printf("\nSource: %s\nDestination: %s\nPermission: %s\n", source, dest, permission)
@@ -66,17 +66,17 @@ func runScp(cmd *cobra.Command, args []string) {
 
 	failedTargets := make(map[string]error)
 
-	for id, ip := range targets {
+	for target, value := range targets {
 		go func(id, ip string) {
 			defer wg.Done()
 
-			err := executeScpOnTarget(id, ip)
+			err := executeScpOnTarget(target, value.IP)
 			if err != nil {
 				mtx.Lock()
-				failedTargets[ip] = err
+				failedTargets[value.IP] = err
 				mtx.Unlock()
 			}
-		}(id, ip)
+		}(target, value.IP)
 	}
 
 	wg.Wait()

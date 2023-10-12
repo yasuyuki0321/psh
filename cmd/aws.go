@@ -9,6 +9,11 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 )
 
+type InstanceInfo struct {
+	IP   string
+	Name string
+}
+
 const (
 	EC2RunningStateCode = 16
 )
@@ -39,7 +44,7 @@ func describeInstances(svc *ec2.Client, tags map[string]string) (resp *ec2.Descr
 	})
 }
 
-func createTargetList(tags map[string]string, ipType string) (map[string]string, error) {
+func createTargetList(tags map[string]string, ipType string) (map[string]InstanceInfo, error) {
 	svc, err := createServiceClient()
 	if err != nil {
 		return nil, fmt.Errorf("unable to create service client, %v", err)
@@ -62,23 +67,37 @@ func createTargetList(tags map[string]string, ipType string) (map[string]string,
 	return targetList, nil
 }
 
-func extractTargets(resp *ec2.DescribeInstancesOutput, ipType string) (map[string]string, error) {
-	targetList := map[string]string{}
+func extractTargets(resp *ec2.DescribeInstancesOutput, ipType string) (map[string]InstanceInfo, error) {
+	targetList := map[string]InstanceInfo{}
+
 	for _, reservation := range resp.Reservations {
 		for _, instance := range reservation.Instances {
 			if *instance.State.Code == EC2RunningStateCode {
+				var ip string
 				switch ipType {
 				case "public":
 					if instance.PublicIpAddress != nil {
-						targetList[*instance.InstanceId] = *instance.PublicIpAddress
+						ip = *instance.PublicIpAddress
 					}
 				case "private":
 					if instance.PrivateIpAddress != nil {
-						targetList[*instance.InstanceId] = *instance.PrivateIpAddress
+						ip = *instance.PrivateIpAddress
 					}
 				default:
 					return nil, fmt.Errorf("ipType is invalid: %v", ipType)
 				}
+
+				name := ""
+				for _, tag := range instance.Tags {
+					if *tag.Key == "Name" {
+						name = *tag.Value
+						break
+					}
+				}
+				if name == "" {
+					name = "-"
+				}
+				targetList[*instance.InstanceId] = InstanceInfo{IP: ip, Name: name}
 			}
 		}
 	}

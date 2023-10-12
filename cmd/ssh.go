@@ -31,8 +31,8 @@ func executeSSHAcrossTargets(cmd *cobra.Command, args []string) {
 
 	if !yes {
 		fmt.Println("Targets:")
-		for id, ip := range targets {
-			fmt.Printf("ID: %s / IP: %s\n", id, ip)
+		for target, value := range targets {
+			fmt.Printf("Name: %s / ID: %s / IP: %s\n", value.Name, target, value.IP)
 		}
 		fmt.Printf("\nCommand: %s\n", command)
 
@@ -50,19 +50,19 @@ func executeSSHAcrossTargets(cmd *cobra.Command, args []string) {
 	wg.Add(len(targets))
 	failedTargets := make(map[string]error)
 
-	for id, ip := range targets {
+	for target, value := range targets {
 		go func(id, ip string) {
 			defer wg.Done()
 
 			var outputBuffer bytes.Buffer
-			err := executeSSH(&outputBuffer, id, ip)
+			err := executeSSH(&outputBuffer, target, value.IP)
 			if err != nil {
 				mtx.Lock()
 				failedTargets[ip] = err
 				mtx.Unlock()
 			}
 			fmt.Print(outputBuffer.String())
-		}(id, ip)
+		}(target, value.IP)
 	}
 
 	wg.Wait()
