@@ -79,7 +79,7 @@ func establishSSHConnection(ip string, config *ssh.ClientConfig) (*ssh.Client, e
 
 	select {
 	case <-ctx.Done():
-		return nil, fmt.Errorf("SSH connection timed out after %d seconds", timeOut)
+		return nil, fmt.Errorf("ssh connection timed out after %d seconds", timeOut)
 	case err := <-errorCh:
 		return nil, err
 	case client := <-resultCh:

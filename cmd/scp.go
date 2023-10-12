@@ -51,6 +51,8 @@ func runScp(cmd *cobra.Command, args []string) {
 		fmt.Print("You have not specified any tags. This will execute scp command to ALL EC2 instances. Continue? [y/N]: ")
 		var response string
 		fmt.Scan(&response)
+		fmt.Println()
+
 		if strings.ToLower(response) != "y" {
 			fmt.Println("Operation aborted.")
 			return
@@ -60,7 +62,7 @@ func runScp(cmd *cobra.Command, args []string) {
 	tags := ParseTags(tags)
 	targets, err := createTargetList(tags, ipType)
 	if err != nil {
-		fmt.Printf("Failed to create target list: %v\n", err)
+		fmt.Printf("failed to create target list: %v\n", err)
 		return
 	}
 
@@ -74,7 +76,7 @@ func runScp(cmd *cobra.Command, args []string) {
 	wg := sync.WaitGroup{}
 	wg.Add(len(targets))
 
-	failedTargets := make(map[string]error)
+	failedTargets := make(map[InstanceInfo]error)
 
 	for target, value := range targets {
 		go func(target string, value InstanceInfo) {
@@ -83,7 +85,7 @@ func runScp(cmd *cobra.Command, args []string) {
 			err := executeScpOnTarget(target, value.IP)
 			if err != nil {
 				mtx.Lock()
-				failedTargets[value.IP] = err
+				failedTargets[value] = err
 				mtx.Unlock()
 			}
 		}(target, value)
@@ -91,8 +93,8 @@ func runScp(cmd *cobra.Command, args []string) {
 
 	wg.Wait()
 
-	for _, err := range failedTargets {
-		fmt.Printf("%v\n", err)
+	for target, value := range failedTargets {
+		fmt.Printf("failed for Name: %s / IP: %s: err: %v\n", target.Name, target.IP, value)
 	}
 
 	fmt.Println("finish")
@@ -216,8 +218,10 @@ func init() {
 	scpCmd.Flags().StringVarP(&privateKeyPath, "private-key", "k", "~/.ssh/id_rsa", "path to private key")
 	scpCmd.Flags().StringVarP(&ipType, "ip-type", "i", "private", "select IP type: public or private")
 	scpCmd.Flags().StringVarP(&source, "source", "s", "", "source file")
+	sshCmd.MarkFlagRequired("source")
 	scpCmd.Flags().StringVarP(&dest, "dest", "d", "", "dest file")
-	scpCmd.Flags().StringVarP(&permission, "permission", "m", "", "permission")
+	sshCmd.MarkFlagRequired("dest")
+	scpCmd.Flags().StringVarP(&permission, "permission", "m", "644", "permission")
 	scpCmd.Flags().BoolVarP(&decompress, "decompress", "z", false, "decompress the file after SCP")
 	scpCmd.Flags().BoolVarP(&createDir, "create-dir", "c", false, "create the directory if it doesn't exist")
 	scpCmd.Flags().BoolVarP(&yes, "yes", "y", false, "skip the preview and execute the SCP directly")

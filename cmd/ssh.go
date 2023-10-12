@@ -26,8 +26,10 @@ func executeSSHAcrossTargets(cmd *cobra.Command, args []string) {
 		fmt.Print("You have not specified any tags. This will execute the command on ALL EC2 instances. Continue? [y/N]: ")
 		var response string
 		fmt.Scan(&response)
+		fmt.Println()
+
 		if strings.ToLower(response) != "y" {
-			fmt.Println("Operation aborted.")
+			fmt.Println("operation aborted.")
 			return
 		}
 	}
@@ -35,7 +37,7 @@ func executeSSHAcrossTargets(cmd *cobra.Command, args []string) {
 	tags := ParseTags(tags)
 	targets, err := createTargetList(tags, ipType)
 	if err != nil {
-		fmt.Printf("Failed to create target list: %v\n", err)
+		fmt.Printf("failed to create target list: %v\n", err)
 		return
 	}
 
@@ -51,7 +53,7 @@ func executeSSHAcrossTargets(cmd *cobra.Command, args []string) {
 		fmt.Scan(&response)
 
 		if strings.ToLower(response) != "y" {
-			fmt.Println("Operation aborted.")
+			fmt.Println("operation aborted.")
 			return
 		}
 	}
@@ -78,7 +80,7 @@ func executeSSHAcrossTargets(cmd *cobra.Command, args []string) {
 	wg.Wait()
 
 	for target, value := range failedTargets {
-		fmt.Printf("Failed for Name: %s / IP: %s: err: %v", target.Name, target.IP, value)
+		fmt.Printf("failed for Name: %s / IP: %s: err: %v\n", target.Name, target.IP, value)
 	}
 
 	fmt.Println("finish")
