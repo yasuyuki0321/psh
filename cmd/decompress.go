@@ -25,11 +25,11 @@ func getDecompressCommand(filePath string) (string, error) {
 	}
 }
 
-func isCommandAvailableOnRemote(user, privateKeyPath, ip, commandName string) (bool, error) {
+func isCommandAvailableOnRemote(user, privateKeyPath, commandName string, target InstanceInfo) (bool, error) {
 	testCmd := fmt.Sprintf("command -v %s", commandName)
 	outputBuffer := &bytes.Buffer{}
 
-	err := sshExecuteCommand(outputBuffer, user, privateKeyPath, "", ip, testCmd, false)
+	err := sshExecuteCommand(outputBuffer, user, privateKeyPath, target, testCmd, false)
 	if err != nil || strings.TrimSpace(outputBuffer.String()) == "" {
 		return false, nil
 	}

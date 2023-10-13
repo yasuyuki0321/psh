@@ -62,19 +62,19 @@ func executeSSHAcrossTargets(cmd *cobra.Command, args []string) {
 	wg.Add(len(targets))
 	failedTargets := make(map[InstanceInfo]error)
 
-	for target, value := range targets {
-		go func(target string, value InstanceInfo) {
+	for _, target := range targets {
+		go func(target, value InstanceInfo) {
 			defer wg.Done()
 
 			var outputBuffer bytes.Buffer
-			err := executeSSH(&outputBuffer, target, value.IP)
+			err := executeSSH(&outputBuffer, target)
 			if err != nil {
 				mtx.Lock()
 				failedTargets[value] = err
 				mtx.Unlock()
 			}
 			fmt.Print(outputBuffer.String())
-		}(target, value)
+		}(target, target)
 	}
 
 	wg.Wait()
@@ -86,26 +86,27 @@ func executeSSHAcrossTargets(cmd *cobra.Command, args []string) {
 	fmt.Println("finish")
 }
 
-func executeSSH(outputBuffer *bytes.Buffer, id, ip string) error {
-	return sshExecuteCommand(outputBuffer, user, privateKeyPath, id, ip, command, true)
+func executeSSH(outputBuffer *bytes.Buffer, target InstanceInfo) error {
+	return sshExecuteCommand(outputBuffer, user, privateKeyPath, target, command, true)
 }
 
-func displaySSHHeader(outputBuffer *bytes.Buffer, id, ip, command string) {
+func displaySSHHeader(outputBuffer *bytes.Buffer, target InstanceInfo, command string) {
 	outputBuffer.WriteString(fmt.Sprintln(strings.Repeat("-", 10)))
 	outputBuffer.WriteString(fmt.Sprintf("Time: %v\n", time.Now().Format("2006-01-02 15:04:05")))
-	outputBuffer.WriteString(fmt.Sprintf("ID: %v\n", id))
-	outputBuffer.WriteString(fmt.Sprintf("IP: %v\n", ip))
+	outputBuffer.WriteString(fmt.Sprintf("ID: %v\n", target.ID))
+	outputBuffer.WriteString(fmt.Sprintf("Name: %v\n", target.Name))
+	outputBuffer.WriteString(fmt.Sprintf("IP: %v\n", target.IP))
 	outputBuffer.WriteString(fmt.Sprintf("Command: %v\n", command))
 	outputBuffer.WriteString(fmt.Sprintln(strings.Repeat("-", 10)))
 }
 
-func sshExecuteCommand(outputBuffer *bytes.Buffer, user, privateKeyPath, id, ip, command string, displayHeader bool) error {
+func sshExecuteCommand(outputBuffer *bytes.Buffer, user string, privateKeyPath string, target InstanceInfo, command string, displayHeader bool) error {
 	config, err := getSSHConfig(privateKeyPath, user)
 	if err != nil {
 		return fmt.Errorf("failed to get ssh config: %v", err)
 	}
 
-	client, err := establishSSHConnection(ip, config)
+	client, err := establishSSHConnection(target.IP, config)
 	if err != nil {
 		return err
 	}
@@ -124,7 +125,7 @@ func sshExecuteCommand(outputBuffer *bytes.Buffer, user, privateKeyPath, id, ip,
 	}
 
 	if displayHeader {
-		displaySSHHeader(outputBuffer, id, ip, command)
+		displaySSHHeader(outputBuffer, target, command)
 	}
 
 	outputBuffer.WriteString(b.String())

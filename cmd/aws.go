@@ -10,8 +10,9 @@ import (
 )
 
 type InstanceInfo struct {
-	IP   string
+	ID   string
 	Name string
+	IP   string
 }
 
 const (
@@ -97,7 +98,7 @@ func extractTargets(resp *ec2.DescribeInstancesOutput, ipType string) (map[strin
 				if name == "" {
 					name = "-"
 				}
-				targetList[*instance.InstanceId] = InstanceInfo{IP: ip, Name: name}
+				targetList[*instance.InstanceId] = InstanceInfo{ID: *instance.InstanceId, IP: ip, Name: name}
 			}
 		}
 	}

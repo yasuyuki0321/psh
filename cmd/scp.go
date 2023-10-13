@@ -25,8 +25,8 @@ var scpCmd = &cobra.Command{
 
 func displayScpPreview(targets map[string]InstanceInfo) bool {
 	fmt.Println("Targets:")
-	for target, value := range targets {
-		fmt.Printf("Name: %s / ID: %s / IP: %s\n", value.Name, target, value.IP)
+	for _, target := range targets {
+		fmt.Printf("Name: %s / ID: %s / IP: %s\n", target.Name, target.ID, target.IP)
 	}
 
 	fmt.Printf("\nSource: %s\nDestination: %s\nPermission: %s\n", source, dest, permission)
@@ -78,17 +78,17 @@ func runScp(cmd *cobra.Command, args []string) {
 
 	failedTargets := make(map[InstanceInfo]error)
 
-	for target, value := range targets {
-		go func(target string, value InstanceInfo) {
+	for _, target := range targets {
+		go func(target InstanceInfo) {
 			defer wg.Done()
 
-			err := executeScpOnTarget(target, value.IP)
+			err := executeScpOnTarget(target)
 			if err != nil {
 				mtx.Lock()
-				failedTargets[value] = err
+				failedTargets[target] = err
 				mtx.Unlock()
 			}
-		}(target, value)
+		}(target)
 	}
 
 	wg.Wait()
@@ -100,30 +100,31 @@ func runScp(cmd *cobra.Command, args []string) {
 	fmt.Println("finish")
 }
 
-func executeScpOnTarget(id, ip string) error {
+func executeScpOnTarget(target InstanceInfo) error {
 	var outputBuffer bytes.Buffer
 
-	err := scpExec(&outputBuffer, user, privateKeyPath, id, ip, source, dest, permission)
+	err := scpExec(&outputBuffer, user, privateKeyPath, source, dest, permission, target)
 	if err != nil {
-		return fmt.Errorf("error executing on %v: %v", ip, err)
+		return fmt.Errorf("error executing on %v: %v", target.IP, err)
 	}
 
 	fmt.Print(outputBuffer.String())
 	return nil
 }
 
-func printScpHeader(outputBuffer *bytes.Buffer, id, ip, source, dest, permission string) {
+func printScpHeader(outputBuffer *bytes.Buffer, source, dest, permission string, target InstanceInfo) {
 	outputBuffer.WriteString(fmt.Sprintln(strings.Repeat("-", 10)))
 	outputBuffer.WriteString(fmt.Sprintf("Time: %v\n", time.Now().Format("2006-01-02 15:04:05")))
-	outputBuffer.WriteString(fmt.Sprintf("ID: %v\n", id))
-	outputBuffer.WriteString(fmt.Sprintf("IP: %v\n", ip))
+	outputBuffer.WriteString(fmt.Sprintf("ID: %v\n", target.ID))
+	outputBuffer.WriteString(fmt.Sprintf("Name: %v\n", target.Name))
+	outputBuffer.WriteString(fmt.Sprintf("IP: %v\n", target.IP))
 	outputBuffer.WriteString(fmt.Sprintf("Source: %v\n", source))
 	outputBuffer.WriteString(fmt.Sprintf("Destination: %v\n", dest))
 	outputBuffer.WriteString(fmt.Sprintf("Permission: %v\n", permission))
 	outputBuffer.WriteString(fmt.Sprintln(strings.Repeat("-", 10)))
 }
 
-func scpExec(outputBuffer *bytes.Buffer, user, privateKeyPath, id, ip, source, dest, permission string) error {
+func scpExec(outputBuffer *bytes.Buffer, user, privateKeyPath, source, dest, permission string, target InstanceInfo) error {
 	var lsCmd string
 
 	config, err := getSSHConfig(privateKeyPath, user)
@@ -131,7 +132,7 @@ func scpExec(outputBuffer *bytes.Buffer, user, privateKeyPath, id, ip, source, d
 		return fmt.Errorf("failed to get ssh config: %v", err)
 	}
 
-	client, err := establishSSHConnection(ip, config)
+	client, err := establishSSHConnection(target.IP, config)
 	if err != nil {
 		return err
 	}
@@ -150,19 +151,19 @@ func scpExec(outputBuffer *bytes.Buffer, user, privateKeyPath, id, ip, source, d
 	defer file.Close()
 
 	destDir := filepath.Dir(dest)
-	exists, err := isDirectoryExistsOnRemote(user, privateKeyPath, ip, destDir)
+	exists, err := isDirectoryExistsOnRemote(user, privateKeyPath, target, destDir)
 	if err != nil {
 		return fmt.Errorf("error checking directory existence: %v", err)
 	}
 	if !exists {
 		if createDir {
 			mkdirCmd := fmt.Sprintf("mkdir -p %s", destDir)
-			err := sshExecuteCommand(outputBuffer, user, privateKeyPath, "", ip, mkdirCmd, false)
+			err := sshExecuteCommand(outputBuffer, user, privateKeyPath, target, mkdirCmd, false)
 			if err != nil {
-				return fmt.Errorf("failed to create directory %s on %s: %v", destDir, ip, err)
+				return fmt.Errorf("failed to create directory %s on %s: %v", destDir, target.IP, err)
 			}
 		} else {
-			return fmt.Errorf("destination directory %s does not exist on %s", destDir, ip)
+			return fmt.Errorf("destination directory %s does not exist on %s", destDir, target.IP)
 		}
 	}
 
@@ -171,7 +172,7 @@ func scpExec(outputBuffer *bytes.Buffer, user, privateKeyPath, id, ip, source, d
 		return fmt.Errorf("error while copying file: %v", err)
 	}
 
-	printScpHeader(outputBuffer, id, ip, source, dest, permission)
+	printScpHeader(outputBuffer, source, dest, permission, target)
 
 	if decompress {
 		decompressCmd, err := getDecompressCommand(dest)
@@ -179,15 +180,15 @@ func scpExec(outputBuffer *bytes.Buffer, user, privateKeyPath, id, ip, source, d
 			return fmt.Errorf("could not get decompress command: %v", err)
 		}
 
-		cmdAvailable, err := isCommandAvailableOnRemote(user, privateKeyPath, ip, strings.Fields(decompressCmd)[0])
+		cmdAvailable, err := isCommandAvailableOnRemote(user, privateKeyPath, strings.Fields(decompressCmd)[0], target)
 		if err != nil {
 			return fmt.Errorf("error checking command availability: %v", err)
 		}
 
 		if cmdAvailable {
-			err = sshExecuteCommand(outputBuffer, user, privateKeyPath, id, ip, decompressCmd, false)
+			err = sshExecuteCommand(outputBuffer, user, privateKeyPath, target, decompressCmd, false)
 			if err != nil {
-				return fmt.Errorf("error decompressing file on %v: %v", ip, err)
+				return fmt.Errorf("error decompressing file on %v: %v", target.IP, err)
 			}
 		} else {
 			return fmt.Errorf("decompression command not available on remote")
@@ -202,7 +203,7 @@ func scpExec(outputBuffer *bytes.Buffer, user, privateKeyPath, id, ip, source, d
 		lsCmd = "ls -ltr " + dest
 	}
 
-	err = sshExecuteCommand(outputBuffer, user, privateKeyPath, id, ip, lsCmd, false)
+	err = sshExecuteCommand(outputBuffer, user, privateKeyPath, target, lsCmd, false)
 	if err != nil {
 		return fmt.Errorf("failed to execute ls command: %v", err)
 	}

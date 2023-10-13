@@ -87,11 +87,11 @@ func establishSSHConnection(ip string, config *ssh.ClientConfig) (*ssh.Client, e
 	}
 }
 
-func isDirectoryExistsOnRemote(user, privateKeyPath, ip, dirPath string) (bool, error) {
+func isDirectoryExistsOnRemote(user string, privateKeyPath string, target InstanceInfo, dirPath string) (bool, error) {
 	checkCmd := fmt.Sprintf("[ -d %s ] && echo 'exists' || echo 'not exists'", dirPath)
 	outputBuffer := &bytes.Buffer{}
 
-	err := sshExecuteCommand(outputBuffer, user, privateKeyPath, "", ip, checkCmd, false)
+	err := sshExecuteCommand(outputBuffer, user, privateKeyPath, target, checkCmd, false)
 	if err != nil {
 		return false, err
 	}
