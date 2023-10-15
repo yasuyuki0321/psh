@@ -48,33 +48,3 @@ func GetDecompressCommand(filePath string) (string, error) {
 		return "", fmt.Errorf("unsupported file extension for %v", filePath)
 	}
 }
-
-// func IsCommandAvailableOnRemote(port, user, privateKeyPath, commandName string, target aws.InstanceInfo) (bool, error) {
-// 	testCmd := fmt.Sprintf("command -v %s", commandName)
-// 	outputBuffer := &bytes.Buffer{}
-
-// 	err := sshutils.ExecuteCommand(outputBuffer, port, user, privateKeyPath, target, testCmd, false)
-// 	if err != nil || strings.TrimSpace(outputBuffer.String()) == "" {
-// 		return false, nil
-// 	}
-// 	return true, nil
-// }
-
-// func IsDirectoryExistsOnRemote(port int, user string, privateKeyPath string, target aws.InstanceInfo, dirPath string) (bool, error) {
-// 	checkCmd := fmt.Sprintf("[ -d %s ] && echo 'exists' || echo 'not exists'", dirPath)
-// 	outputBuffer := &bytes.Buffer{}
-
-// 	err := sshutils.SshExecuteCommand(outputBuffer, port, user, privateKeyPath, target, checkCmd, false)
-// 	if err != nil {
-// 		return false, err
-// 	}
-
-// 	output := strings.TrimSpace(outputBuffer.String())
-// 	if output == "exists" {
-// 		return true, nil
-// 	} else if output == "not exists" {
-// 		return false, nil
-// 	} else {
-// 		return false, fmt.Errorf("unexpected output: %s", output)
-// 	}
-// }
