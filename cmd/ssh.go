@@ -11,12 +11,19 @@ import (
 )
 
 var user, privateKeyPath, tags, ipType, command string
+var port int
 var yes bool
 
 var sshCmd = &cobra.Command{
 	Use:   "ssh",
 	Short: "execute SSH command across multiple targets",
 	Run:   executeSSHAcrossTargets,
+	PreRunE: func(cmd *cobra.Command, args []string) error {
+		if port != 22 && (port < 1024 || port > 65535) {
+			return fmt.Errorf("port value %d is out of the range 1024-65535 or not equal to 22", port)
+		}
+		return nil
+	},
 }
 
 func executeSSHAcrossTargets(cmd *cobra.Command, args []string) {
@@ -140,6 +147,7 @@ func init() {
 	sshCmd.Flags().StringVarP(&tags, "tags", "t", "", "comma-separated list of tag key=value pairs Example: Key1=Value1,Key2=Value2")
 	sshCmd.Flags().StringVarP(&user, "user", "u", "ec2-user", "username for SSH")
 	sshCmd.Flags().StringVarP(&privateKeyPath, "private-key", "k", "~/.ssh/id_rsa", "path to private key")
+	sshCmd.Flags().IntVarP(&port, "port", "p", 22, "port number for SSH")
 	sshCmd.Flags().StringVarP(&ipType, "ip-type", "i", "private", "select IP type: public or private")
 	sshCmd.Flags().StringVarP(&command, "command", "c", "", "command to execute via SSH")
 	sshCmd.MarkFlagRequired("command")

@@ -21,6 +21,12 @@ var scpCmd = &cobra.Command{
 	Use:   "scp",
 	Short: "execute scp operations across multiple targets",
 	Run:   runScp,
+	PreRunE: func(cmd *cobra.Command, args []string) error {
+		if port != 22 && (port < 1024 || port > 65535) {
+			return fmt.Errorf("port value %d is out of the range 1024-65535 or not equal to 22", port)
+		}
+		return nil
+	},
 }
 
 func displayScpPreview(targets map[string]InstanceInfo) bool {
@@ -217,6 +223,7 @@ func init() {
 	scpCmd.Flags().StringVarP(&tags, "tags", "t", "", "comma-separated list of tag key=value pairs. Example: Key1=Value1,Key2=Value2")
 	scpCmd.Flags().StringVarP(&user, "user", "u", "ec2-user", "username to execute SCP command")
 	scpCmd.Flags().StringVarP(&privateKeyPath, "private-key", "k", "~/.ssh/id_rsa", "path to private key")
+	scpCmd.Flags().IntVarP(&port, "port", "p", 22, "port number for SSH")
 	scpCmd.Flags().StringVarP(&ipType, "ip-type", "i", "private", "select IP type: public or private")
 	scpCmd.Flags().StringVarP(&source, "source", "s", "", "source file")
 	sshCmd.MarkFlagRequired("source")
