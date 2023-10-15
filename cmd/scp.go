@@ -138,7 +138,7 @@ func scpExec(outputBuffer *bytes.Buffer, user, privateKeyPath, source, dest, per
 		return fmt.Errorf("failed to get ssh config: %v", err)
 	}
 
-	client, err := establishSSHConnection(target.IP, config)
+	client, err := establishSSHConnection(target.IP, port, config)
 	if err != nil {
 		return err
 	}

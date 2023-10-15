@@ -70,18 +70,18 @@ func executeSSHAcrossTargets(cmd *cobra.Command, args []string) {
 	failedTargets := make(map[InstanceInfo]error)
 
 	for _, target := range targets {
-		go func(target, value InstanceInfo) {
+		go func(target InstanceInfo) {
 			defer wg.Done()
 
 			var outputBuffer bytes.Buffer
 			err := executeSSH(&outputBuffer, target)
 			if err != nil {
 				mtx.Lock()
-				failedTargets[value] = err
+				failedTargets[target] = err
 				mtx.Unlock()
 			}
 			fmt.Print(outputBuffer.String())
-		}(target, target)
+		}(target)
 	}
 
 	wg.Wait()
@@ -113,7 +113,7 @@ func sshExecuteCommand(outputBuffer *bytes.Buffer, user string, privateKeyPath s
 		return fmt.Errorf("failed to get ssh config: %v", err)
 	}
 
-	client, err := establishSSHConnection(target.IP, config)
+	client, err := establishSSHConnection(target.IP, port, config)
 	if err != nil {
 		return err
 	}

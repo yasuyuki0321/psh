@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -60,7 +61,7 @@ func getSSHConfig(privateKeyPath, user string) (*ssh.ClientConfig, error) {
 	}, nil
 }
 
-func establishSSHConnection(ip string, config *ssh.ClientConfig) (*ssh.Client, error) {
+func establishSSHConnection(ip string, port int, config *ssh.ClientConfig) (*ssh.Client, error) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), timeOut*time.Second)
 	defer cancel()
@@ -69,7 +70,7 @@ func establishSSHConnection(ip string, config *ssh.ClientConfig) (*ssh.Client, e
 	errorCh := make(chan error)
 
 	go func() {
-		client, err := ssh.Dial("tcp", ip+":22", config)
+		client, err := ssh.Dial("tcp", ip+":"+strconv.Itoa(port), config)
 		if err != nil {
 			errorCh <- err
 			return
