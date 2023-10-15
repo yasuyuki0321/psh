@@ -59,7 +59,7 @@ mv ./psh-${arch} /bin/
 
 ### ssh
 
-```text
+```sh
 execute SSH command across multiple targets
 
 Usage:
@@ -69,6 +69,7 @@ Flags:
   -c, --command string       command to execute via SSH
   -h, --help                 help for ssh
   -i, --ip-type string       select IP type: public or private (default "private")
+  -p, --port int             port number for SSH (default 22)
   -k, --private-key string   path to private key (default "~/.ssh/id_rsa")
   -t, --tags string          comma-separated list of tag key=value pairs Example: Key1=Value1,Key2=Value2
   -u, --user string          username for SSH (default "ec2-user")
@@ -77,7 +78,7 @@ Flags:
 
 ### scp
 
-```text
+```sh
 execute scp operations across multiple targets
 
 Usage:
@@ -90,6 +91,7 @@ Flags:
   -h, --help                 help for scp
   -i, --ip-type string       select IP type: public or private (default "private")
   -m, --permission string    permission (default "644")
+  -p, --port int             port number for SSH (default 22)
   -k, --private-key string   path to private key (default "~/.ssh/id_rsa")
   -s, --source string        source file
   -t, --tags string          comma-separated list of tag key=value pairs. Example: Key1=Value1,Key2=Value2
@@ -101,7 +103,7 @@ Flags:
 
 ### ssh
 
-```text
+```sh
 $ ./psh ssh -t Name=test,ssh=true -k ~/.ssh/yasuyuki0321-rsa.pem -i public -u ec2-user -c "uname -n"
 Targets:
 Name: test / ID: i-0a9ad44aa54f06a79 / IP: 57.180.27.233
@@ -133,7 +135,7 @@ finish
 
 ### scp
 
-```text
+```sh
 ./psh scp -t Name=test,ssh=true -k ~/.ssh/yasuyuki0321-rsa.pem -i public -u ec2-user -s ./test.txt -d ./test.txt -m 0644
 Targets:
 Name: test / ID: i-068112822e1c8efd8 / IP: 13.112.120.101
