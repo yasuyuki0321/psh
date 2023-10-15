@@ -1,4 +1,4 @@
-package cmd
+package aws
 
 import (
 	"context"
@@ -45,7 +45,7 @@ func describeInstances(svc *ec2.Client, tags map[string]string) (resp *ec2.Descr
 	})
 }
 
-func createTargetList(tags map[string]string, ipType string) (map[string]InstanceInfo, error) {
+func CreateTargetList(tags map[string]string, ipType string) (map[string]InstanceInfo, error) {
 	svc, err := createServiceClient()
 	if err != nil {
 		return nil, fmt.Errorf("unable to create service client, %v", err)

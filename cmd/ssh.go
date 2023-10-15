@@ -5,9 +5,12 @@ import (
 	"fmt"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/spf13/cobra"
+
+	"github.com/yasuyuki0321/psh/pkg/aws"
+	"github.com/yasuyuki0321/psh/pkg/sshutils"
+	"github.com/yasuyuki0321/psh/pkg/utils"
 )
 
 var user, privateKeyPath, tags, ipType, command string
@@ -41,8 +44,8 @@ func executeSSHAcrossTargets(cmd *cobra.Command, args []string) {
 		}
 	}
 
-	tags := ParseTags(tags)
-	targets, err := createTargetList(tags, ipType)
+	tags := utils.ParseTags(tags)
+	targets, err := aws.CreateTargetList(tags, ipType)
 	if err != nil {
 		fmt.Printf("failed to create target list: %v\n", err)
 		return
@@ -67,14 +70,14 @@ func executeSSHAcrossTargets(cmd *cobra.Command, args []string) {
 
 	wg := sync.WaitGroup{}
 	wg.Add(len(targets))
-	failedTargets := make(map[InstanceInfo]error)
+	failedTargets := make(map[aws.InstanceInfo]error)
 
 	for _, target := range targets {
-		go func(target InstanceInfo) {
+		go func(target aws.InstanceInfo) {
 			defer wg.Done()
 
 			var outputBuffer bytes.Buffer
-			err := executeSSH(&outputBuffer, target)
+			err := sshutils.ExecuteSSH(&outputBuffer, port, user, privateKeyPath, target, command)
 			if err != nil {
 				mtx.Lock()
 				failedTargets[target] = err
@@ -87,58 +90,10 @@ func executeSSHAcrossTargets(cmd *cobra.Command, args []string) {
 	wg.Wait()
 
 	for target, value := range failedTargets {
-		fmt.Printf("failed for Name: %s / IP: %s: err: %v\n", target.Name, target.IP, value)
+		fmt.Printf("Failed to execute SSH command on Target [Name: %s (IP: %s)]. Error: %v\n", target.Name, target.IP, value)
 	}
 
 	fmt.Println("finish")
-}
-
-func executeSSH(outputBuffer *bytes.Buffer, target InstanceInfo) error {
-	return sshExecuteCommand(outputBuffer, user, privateKeyPath, target, command, true)
-}
-
-func displaySSHHeader(outputBuffer *bytes.Buffer, target InstanceInfo, command string) {
-	outputBuffer.WriteString(fmt.Sprintln(strings.Repeat("-", 10)))
-	outputBuffer.WriteString(fmt.Sprintf("Time: %v\n", time.Now().Format("2006-01-02 15:04:05")))
-	outputBuffer.WriteString(fmt.Sprintf("ID: %v\n", target.ID))
-	outputBuffer.WriteString(fmt.Sprintf("Name: %v\n", target.Name))
-	outputBuffer.WriteString(fmt.Sprintf("IP: %v\n", target.IP))
-	outputBuffer.WriteString(fmt.Sprintf("Command: %v\n", command))
-	outputBuffer.WriteString(fmt.Sprintln(strings.Repeat("-", 10)))
-}
-
-func sshExecuteCommand(outputBuffer *bytes.Buffer, user string, privateKeyPath string, target InstanceInfo, command string, displayHeader bool) error {
-	config, err := getSSHConfig(privateKeyPath, user)
-	if err != nil {
-		return fmt.Errorf("failed to get ssh config: %v", err)
-	}
-
-	client, err := establishSSHConnection(target.IP, port, config)
-	if err != nil {
-		return err
-	}
-	defer client.Close()
-
-	session, err := client.NewSession()
-	if err != nil {
-		return fmt.Errorf("failed to create session: %v", err)
-	}
-	defer session.Close()
-
-	var b bytes.Buffer
-	session.Stdout = &b
-	if err := session.Run(command); err != nil {
-		return fmt.Errorf("failed to run command: %v", err)
-	}
-
-	if displayHeader {
-		displaySSHHeader(outputBuffer, target, command)
-	}
-
-	outputBuffer.WriteString(b.String())
-	outputBuffer.WriteString("\n")
-
-	return nil
 }
 
 func init() {

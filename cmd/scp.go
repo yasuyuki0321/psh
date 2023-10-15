@@ -12,6 +12,10 @@ import (
 
 	scp "github.com/bramvdbogaerde/go-scp"
 	"github.com/spf13/cobra"
+	"github.com/yasuyuki0321/psh/pkg/aws"
+	"github.com/yasuyuki0321/psh/pkg/ssh"
+	"github.com/yasuyuki0321/psh/pkg/sshutils"
+	"github.com/yasuyuki0321/psh/pkg/utils"
 )
 
 var source, dest, permission string
@@ -29,7 +33,7 @@ var scpCmd = &cobra.Command{
 	},
 }
 
-func displayScpPreview(targets map[string]InstanceInfo) bool {
+func displayScpPreview(targets map[string]aws.InstanceInfo) bool {
 	fmt.Println("Targets:")
 	for _, target := range targets {
 		fmt.Printf("Name: %s / ID: %s / IP: %s\n", target.Name, target.ID, target.IP)
@@ -65,8 +69,8 @@ func runScp(cmd *cobra.Command, args []string) {
 		}
 	}
 
-	tags := ParseTags(tags)
-	targets, err := createTargetList(tags, ipType)
+	tags := utils.ParseTags(tags)
+	targets, err := aws.CreateTargetList(tags, ipType)
 	if err != nil {
 		fmt.Printf("failed to create target list: %v\n", err)
 		return
@@ -82,10 +86,10 @@ func runScp(cmd *cobra.Command, args []string) {
 	wg := sync.WaitGroup{}
 	wg.Add(len(targets))
 
-	failedTargets := make(map[InstanceInfo]error)
+	failedTargets := make(map[aws.InstanceInfo]error)
 
 	for _, target := range targets {
-		go func(target InstanceInfo) {
+		go func(target aws.InstanceInfo) {
 			defer wg.Done()
 
 			err := executeScpOnTarget(target)
@@ -106,7 +110,7 @@ func runScp(cmd *cobra.Command, args []string) {
 	fmt.Println("finish")
 }
 
-func executeScpOnTarget(target InstanceInfo) error {
+func executeScpOnTarget(target aws.InstanceInfo) error {
 	var outputBuffer bytes.Buffer
 
 	err := scpExec(&outputBuffer, user, privateKeyPath, source, dest, permission, target)
@@ -118,7 +122,7 @@ func executeScpOnTarget(target InstanceInfo) error {
 	return nil
 }
 
-func printScpHeader(outputBuffer *bytes.Buffer, source, dest, permission string, target InstanceInfo) {
+func printScpHeader(outputBuffer *bytes.Buffer, source, dest, permission string, target aws.InstanceInfo) {
 	outputBuffer.WriteString(fmt.Sprintln(strings.Repeat("-", 10)))
 	outputBuffer.WriteString(fmt.Sprintf("Time: %v\n", time.Now().Format("2006-01-02 15:04:05")))
 	outputBuffer.WriteString(fmt.Sprintf("ID: %v\n", target.ID))
@@ -130,15 +134,15 @@ func printScpHeader(outputBuffer *bytes.Buffer, source, dest, permission string,
 	outputBuffer.WriteString(fmt.Sprintln(strings.Repeat("-", 10)))
 }
 
-func scpExec(outputBuffer *bytes.Buffer, user, privateKeyPath, source, dest, permission string, target InstanceInfo) error {
+func scpExec(outputBuffer *bytes.Buffer, user, privateKeyPath, source, dest, permission string, target aws.InstanceInfo) error {
 	var lsCmd string
 
-	config, err := getSSHConfig(privateKeyPath, user)
+	config, err := ssh.GetSSHConfig(privateKeyPath, user)
 	if err != nil {
 		return fmt.Errorf("failed to get ssh config: %v", err)
 	}
 
-	client, err := establishSSHConnection(target.IP, port, config)
+	client, err := ssh.EstablishSSHConnection(target.IP, port, config)
 	if err != nil {
 		return err
 	}
@@ -157,14 +161,14 @@ func scpExec(outputBuffer *bytes.Buffer, user, privateKeyPath, source, dest, per
 	defer file.Close()
 
 	destDir := filepath.Dir(dest)
-	exists, err := isDirectoryExistsOnRemote(user, privateKeyPath, target, destDir)
+	exists, err := sshutils.IsDirectoryExistsOnRemote(port, user, privateKeyPath, target, destDir)
 	if err != nil {
 		return fmt.Errorf("error checking directory existence: %v", err)
 	}
 	if !exists {
 		if createDir {
 			mkdirCmd := fmt.Sprintf("mkdir -p %s", destDir)
-			err := sshExecuteCommand(outputBuffer, user, privateKeyPath, target, mkdirCmd, false)
+			err := sshutils.SshExecuteCommand(outputBuffer, port, user, privateKeyPath, target, mkdirCmd, false)
 			if err != nil {
 				return fmt.Errorf("failed to create directory %s on %s: %v", destDir, target.IP, err)
 			}
@@ -181,18 +185,18 @@ func scpExec(outputBuffer *bytes.Buffer, user, privateKeyPath, source, dest, per
 	printScpHeader(outputBuffer, source, dest, permission, target)
 
 	if decompress {
-		decompressCmd, err := getDecompressCommand(dest)
+		decompressCmd, err := utils.GetDecompressCommand(dest)
 		if err != nil {
 			return fmt.Errorf("could not get decompress command: %v", err)
 		}
 
-		cmdAvailable, err := isCommandAvailableOnRemote(user, privateKeyPath, strings.Fields(decompressCmd)[0], target)
+		cmdAvailable, err := sshutils.IsCommandAvailableOnRemote(port, user, privateKeyPath, strings.Fields(decompressCmd)[0], target)
 		if err != nil {
 			return fmt.Errorf("error checking command availability: %v", err)
 		}
 
 		if cmdAvailable {
-			err = sshExecuteCommand(outputBuffer, user, privateKeyPath, target, decompressCmd, false)
+			err = sshutils.SshExecuteCommand(outputBuffer, port, user, privateKeyPath, target, decompressCmd, false)
 			if err != nil {
 				return fmt.Errorf("error decompressing file on %v: %v", target.IP, err)
 			}
@@ -209,7 +213,7 @@ func scpExec(outputBuffer *bytes.Buffer, user, privateKeyPath, source, dest, per
 		lsCmd = "ls -ltr " + dest
 	}
 
-	err = sshExecuteCommand(outputBuffer, user, privateKeyPath, target, lsCmd, false)
+	err = sshutils.SshExecuteCommand(outputBuffer, port, user, privateKeyPath, target, lsCmd, false)
 	if err != nil {
 		return fmt.Errorf("failed to execute ls command: %v", err)
 	}
