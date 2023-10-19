@@ -3,7 +3,6 @@ package cmd
 import (
 	"bytes"
 	"fmt"
-	"strings"
 	"sync"
 
 	"github.com/spf13/cobra"
@@ -13,14 +12,15 @@ import (
 	"github.com/yasuyuki0321/psh/pkg/utils"
 )
 
-var user, privateKeyPath, tags, ipType, command string
+var user, privateKeyPath, tags, ipType, command, argument string
 var port int
 var yes bool
+var sshConfig sshutils.SshConfig
 
 var sshCmd = &cobra.Command{
 	Use:   "ssh",
 	Short: "execute SSH command across multiple targets",
-	Run:   executeSSHAcrossTargets,
+	Run:   runSsh,
 	PreRunE: func(cmd *cobra.Command, args []string) error {
 		if port != 22 && (port < 1024 || port > 65535) {
 			return fmt.Errorf("port value %d is out of the range 1024-65535 or not equal to 22", port)
@@ -29,45 +29,41 @@ var sshCmd = &cobra.Command{
 	},
 }
 
-func executeSSHAcrossTargets(cmd *cobra.Command, args []string) {
-	var mtx sync.Mutex
+func runSsh(cmd *cobra.Command, args []string) {
 
+	sshConfig := sshutils.SshConfig{
+		User:       user,
+		PrivateKey: privateKeyPath,
+		Port:       port,
+		Command:    command,
+	}
+
+	// タグが指定されていない場合の確認処理する
 	if tags == "" {
-		fmt.Print("You have not specified any tags. This will execute the command on ALL EC2 instances. Continue? [y/N]: ")
-		var response string
-		fmt.Scan(&response)
-		fmt.Println()
-
-		if strings.ToLower(response) != "y" {
-			fmt.Println("operation aborted.")
+		if !utils.ConfirmNoTagPrompt() {
+			fmt.Println("Operation aborted by user due to lack of specified tags.")
 			return
 		}
 	}
 
+	// タグの解析
 	tags := utils.ParseTags(tags)
+
+	// 対象となるインスタンスのリストの生成する
 	targets, err := aws.CreateTargetList(tags, ipType)
 	if err != nil {
 		fmt.Printf("failed to create target list: %v\n", err)
 		return
 	}
 
-	if !yes {
-		fmt.Println("Targets:")
-		for target, value := range targets {
-			fmt.Printf("Name: %s / ID: %s / IP: %s\n", value.Name, target, value.IP)
-		}
-		fmt.Printf("\nCommand: %s\n", command)
-
-		fmt.Print("\nDo you want to continue? [y/N]: ")
-		var response string
-		fmt.Scan(&response)
-
-		if strings.ToLower(response) != "y" {
-			fmt.Println("operation aborted.")
-			return
-		}
+	// ターゲットとコマンドのプレビュー表示する
+	if !yes && !sshutils.PreviewTargets(targets, command) {
+		fmt.Println("operation aborted.")
+		return
 	}
 
+	// 各ターゲットにSSH接続してコマンドを実行する
+	var mtx sync.Mutex
 	wg := sync.WaitGroup{}
 	wg.Add(len(targets))
 	failedTargets := make(map[aws.InstanceInfo]error)
@@ -77,7 +73,7 @@ func executeSSHAcrossTargets(cmd *cobra.Command, args []string) {
 			defer wg.Done()
 
 			var outputBuffer bytes.Buffer
-			err := sshutils.ExecuteSSH(&outputBuffer, port, user, privateKeyPath, target, command)
+			err := sshutils.ExecuteSSH(&outputBuffer, &sshConfig, target, true)
 			if err != nil {
 				mtx.Lock()
 				failedTargets[target] = err
@@ -86,9 +82,9 @@ func executeSSHAcrossTargets(cmd *cobra.Command, args []string) {
 			fmt.Print(outputBuffer.String())
 		}(target)
 	}
-
 	wg.Wait()
 
+	// 失敗したターゲットの情報表示する
 	for target, value := range failedTargets {
 		fmt.Printf("Failed to execute SSH command on Target [Name: %s (IP: %s)]. Error: %v\n", target.Name, target.IP, value)
 	}

@@ -5,6 +5,7 @@
         "goarch",
         "hisotry",
         "lart",
+        "scputils",
         "sshutils",
         "zxvf"
     ]

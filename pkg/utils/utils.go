@@ -21,13 +21,14 @@ func ParseTags(tags string) map[string]string {
 }
 
 func GetHomePath(path string) string {
-	if path[:2] != "~/" {
+	if len(path) < 2 || path[:2] != "~/" {
 		return path
 	}
 	home, err := os.UserHomeDir()
 	if err != nil {
 		panic(err)
 	}
+
 	return filepath.Join(home, path[2:])
 }
 
@@ -47,4 +48,18 @@ func GetDecompressCommand(filePath string) (string, error) {
 	default:
 		return "", fmt.Errorf("unsupported file extension for %v", filePath)
 	}
+}
+
+func ConfirmNoTagPrompt() bool {
+	fmt.Print("You have not specified any tags. This will execute the command on ALL EC2 instances. Do you want to continue? [y/N]: ")
+
+	var response string
+	_, err := fmt.Scan(&response)
+	if err != nil {
+		fmt.Println("Input error: ", err)
+		return false
+	}
+	fmt.Println()
+
+	return strings.ToLower(response) == "y"
 }
