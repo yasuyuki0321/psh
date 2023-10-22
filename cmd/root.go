@@ -8,7 +8,7 @@ import (
 
 var rootCmd = &cobra.Command{
 	Use:   "psh",
-	Short: "parallel shell execution",
+	Short: "parallel shell executer",
 }
 
 func Execute() {
