@@ -61,7 +61,7 @@ func runScp(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	if !yes {
+	if !preview {
 		if !scputils.DisplayScpPreview(targets, &scpConfig) {
 			fmt.Println("Operation aborted.")
 			return
@@ -111,5 +111,5 @@ func init() {
 	scpCmd.Flags().StringVarP(&permission, "permission", "m", "644", "permission")
 	scpCmd.Flags().BoolVarP(&decompress, "decompress", "z", false, "decompress the file after SCP")
 	scpCmd.Flags().BoolVarP(&createDir, "create-dir", "c", false, "create the directory if it doesn't exist")
-	scpCmd.Flags().BoolVarP(&yes, "yes", "y", false, "skip the preview and execute the SCP directly")
+	sshCmd.Flags().BoolVarP(&preview, "preview", "y", false, "skip the preview and execute the command directly")
 }

@@ -14,7 +14,7 @@ import (
 
 var user, privateKeyPath, tags, ipType, command, argument string
 var port int
-var yes bool
+var preview bool
 var sshConfig sshutils.SshConfig
 
 var sshCmd = &cobra.Command{
@@ -57,7 +57,7 @@ func runSsh(cmd *cobra.Command, args []string) {
 	}
 
 	// ターゲットとコマンドのプレビュー表示する
-	if !yes && !sshutils.PreviewTargets(targets, command) {
+	if !preview && !sshutils.PreviewTargets(targets, command) {
 		fmt.Println("operation aborted.")
 		return
 	}
@@ -102,5 +102,5 @@ func init() {
 	sshCmd.Flags().StringVarP(&ipType, "ip-type", "i", "private", "select IP type: public or private")
 	sshCmd.Flags().StringVarP(&command, "command", "c", "", "command to execute via SSH")
 	sshCmd.MarkFlagRequired("command")
-	sshCmd.Flags().BoolVarP(&yes, "yes", "y", false, "skip the preview and execute the command directly")
+	sshCmd.Flags().BoolVarP(&preview, "preview", "y", false, "skip the preview and execute the command directly")
 }
