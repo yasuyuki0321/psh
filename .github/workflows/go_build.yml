@@ -39,7 +39,7 @@ jobs:
           tar -czvf build/psh-${{ matrix.os }}.tar.gz -C build psh-${{ matrix.os }}
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: ${{ matrix.os }}.tar.gz
           path: build/psh-${{ matrix.os }}.tar.gz
