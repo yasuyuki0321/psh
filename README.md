@@ -1,18 +1,22 @@
-# psh (parallel shell)
+# psh
+
+parallel shellの略称
 
 ## 概要
 
 - 複数のEC2インスタンスに対して並列でssh/scpコマンドを実行するためのツール
-- サーバの台数が多い場合に短時間での処理が可能
+- 処理は並列で実行されるため、サーバの台数が多い場合に短時間での処理が可能
 - サーバの対象はサーバに付与しているタグで指定する
-  - タグはカンマ区切りで複数指定可能
+  - タグはワイルドカード、カンマ区切りで複数指定が可能
+- `-t` オプションを指定しない場合、describe-instancesで表示されるすべての起動中のインスタンスに対してコマンドが実行される
+- 処理実行前に実行コマンドのプレビューが可能
+  - `-y` オプションを付与することでプレビューのスキップが可能
 - scpの場合、 `-z` オプションを付与することで、scp後にファイルの展開を行う
   - 下記の拡張子をサポート
   - .tar / .tar.gz / .gz / .zip
 - spcの際、 `-c` オプションを付与することでディレクトリが存在しない場合でも、作成することが可能
-- 処理実行前に実行コマンドのプレビューが可能
-  - `-y` オプションを付与することでプレビューのスキップが可能
-- `-t` オプションを指定しない場合、describe-instancesで表示されるすべての起動中のインスタンスに対してコマンドが実行される
+- 実行ユーザのホームディレクトリ配下にログを出力する
+  - ログファイル名は `~/.psh_hisotry`
 
 ## 前提
 
@@ -44,10 +48,9 @@ IAM Policy
 ## インストール方法
 
 ```sh
-version="v0.1.0"
 arch="darwin-arm64"
 
-curl -L https://github.com/yasuyuki0321/psh/releases/download/${version}/psh-${arch}.tar.gz | tar zxvf -
+curl -L https://github.com/yasuyuki0321/psh/releases/latest/download/psh-${arch}.tar.gz | tar zxvf -
 chmod 755 psh-${arch}
 
 ※ 必要に応じてリンクを作成したり、/bin等、PATHの通っているディレクトリに配置する
@@ -71,9 +74,9 @@ Flags:
   -i, --ip-type string       select IP type: public or private (default "private")
   -p, --port int             port number for SSH (default 22)
   -k, --private-key string   path to private key (default "~/.ssh/id_rsa")
+  -y, --skip-preview         skip the preview and execute the command directly
   -t, --tags string          comma-separated list of tag key=value pairs Example: Key1=Value1,Key2=Value2
   -u, --user string          username for SSH (default "ec2-user")
-  -y, --yes                  skip the preview and execute the command directly
 ```
 
 ### scp
@@ -93,10 +96,10 @@ Flags:
   -m, --permission string    permission (default "644")
   -p, --port int             port number for SSH (default 22)
   -k, --private-key string   path to private key (default "~/.ssh/id_rsa")
+  -y, --skip-preview         skip the preview and execute the command directly
   -s, --source string        source file
   -t, --tags string          comma-separated list of tag key=value pairs. Example: Key1=Value1,Key2=Value2
   -u, --user string          username to execute SCP command (default "ec2-user")
-  -y, --yes                  skip the preview and execute the SCP directly
 ```
 
 ## コマンドの実行例
